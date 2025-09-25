@@ -11,7 +11,7 @@ Minecraft Verilog synthesizer
  - https://doc.rust-lang.org/stable/rust-by-example/index.html
     - Backup: Python
 
-### Yosys
+### Verilog & Yosys
  - https://yosyshq.net/yosys/
  - https://blog.eowyn.net/yosys/CHAPTER_Approach.html
 
@@ -39,59 +39,18 @@ sudo apt-get install iverilog yosys
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ```
 
-## Testing
+## Verilog/Yosys notes
+
+Basic usage of [Icarus Verilog](https://github.com/steveicarus/iverilog):
 
 (g2012 enables systemverilog)
 ```bash
 iverilog -g2012 adder.v -o adder
 ```
 
-Example Usage
-
-Yosys is controlled using synthesis scripts. For example, the following Yosys synthesis script reads a design (with the top module mytop) from the verilog file mydesign.v, synthesizes it to a gate-level netlist using the cell library in the Liberty file mycells.lib and writes the synthesized results as Verilog netlist to synth.v:
-
-```bash
-# read design
-read_verilog mydesign.v
-
-# elaborate design hierarchy
-hierarchy -check -top mytop
-
-# the high-level stuff
-proc; opt; fsm; opt; memory; opt
-
-# mapping to internal cell library
-techmap; opt
-
-# mapping flip-flops to mycells.lib
-dfflibmap -liberty mycells.lib
-
-# mapping logic to mycells.lib
-abc -liberty mycells.lib
-
-# cleanup
-clean
-
-# write synthesized design
-write_verilog synth.v
-```
-
-The synth command provides a good default script that can be used as basis for simple synthesis scripts:
-
-```bash
-# read design
-read_verilog mydesign.v
-
-# generic synthesis
-synth -top mytop
-
-# mapping to mycells.lib
-dfflibmap -liberty mycells.lib
-abc -liberty mycells.lib
-clean
-
-# write synthesized design
-write_verilog synth.v
-```
-
-See help synth for details on the synth command. 
+Links for generating BLIF netlists with Yosys:
+ - https://github.com/qmn/dewey/blob/master/scripts/yosys.sh
+ - https://github.com/qmn/dewey/blob/master/quan.lib
+ - https://yosyshq.readthedocs.io/projects/yosys/en/latest/appendix/APPNOTE_010_Verilog_to_BLIF.html
+ - https://course.ece.cmu.edu/~ee760/760docs/blif.pdf
+ - https://lib.rs/crates/blif-parser
