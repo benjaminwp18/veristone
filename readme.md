@@ -7,7 +7,7 @@ Minecraft Verilog synthesizer
  - Netlist -> our code -> mcfunction
 
 ## Resources
-### Python
+### Rust
  - https://doc.rust-lang.org/stable/rust-by-example/index.html
     - Backup: Python
 
@@ -27,6 +27,7 @@ Minecraft Verilog synthesizer
  - https://github.com/PietPtr/verilog2minecraft
  - https://github.com/google/minetest_pnr
 
+### qmn
  - http://sigtbd.csail.mit.edu/ (doesn't load???)
  - https://github.com/qmn/pershing
  - https://github.com/qmn/dewey
