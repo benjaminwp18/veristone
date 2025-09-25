@@ -7,12 +7,17 @@ Minecraft Verilog synthesizer
  - Netlist -> our code -> mcfunction
 
 ## Resources
+### Python
  - https://doc.rust-lang.org/stable/rust-by-example/index.html
     - Backup: Python
+
+### Yosys
  - https://yosyshq.net/yosys/
+ - https://blog.eowyn.net/yosys/CHAPTER_Approach.html
+
+### Minecraft
  - https://minecraft.wiki/w/Function_(Java_Edition)
  - https://minecraft.wiki/w/Commands/setblock
- - https://blog.eowyn.net/yosys/CHAPTER_Approach.html
 
 ## Previous Projects
  - https://github.com/itsfrank/MinecraftHDL
@@ -21,7 +26,10 @@ Minecraft Verilog synthesizer
  - https://github.com/InputBlackBoxOutput/Redstone-HDL
  - https://github.com/PietPtr/verilog2minecraft
  - https://github.com/google/minetest_pnr
+
  - http://sigtbd.csail.mit.edu/ (doesn't load???)
+ - https://github.com/qmn/pershing
+ - https://github.com/qmn/dewey
 
 ## Setup
 
