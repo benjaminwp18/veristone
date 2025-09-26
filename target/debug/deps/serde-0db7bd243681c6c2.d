@@ -1,0 +1,14 @@
+/home/michael-lindsay/veristone/target/debug/deps/libserde-0db7bd243681c6c2.rmeta: /home/michael-lindsay/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.227/src/lib.rs /home/michael-lindsay/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.227/src/integer128.rs /home/michael-lindsay/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.227/src/private/mod.rs /home/michael-lindsay/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.227/src/private/de.rs /home/michael-lindsay/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.227/src/private/ser.rs /home/michael-lindsay/veristone/target/debug/build/serde-cec6e7806ece626d/out/private.rs
+
+/home/michael-lindsay/veristone/target/debug/deps/libserde-0db7bd243681c6c2.rlib: /home/michael-lindsay/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.227/src/lib.rs /home/michael-lindsay/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.227/src/integer128.rs /home/michael-lindsay/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.227/src/private/mod.rs /home/michael-lindsay/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.227/src/private/de.rs /home/michael-lindsay/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.227/src/private/ser.rs /home/michael-lindsay/veristone/target/debug/build/serde-cec6e7806ece626d/out/private.rs
+
+/home/michael-lindsay/veristone/target/debug/deps/serde-0db7bd243681c6c2.d: /home/michael-lindsay/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.227/src/lib.rs /home/michael-lindsay/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.227/src/integer128.rs /home/michael-lindsay/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.227/src/private/mod.rs /home/michael-lindsay/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.227/src/private/de.rs /home/michael-lindsay/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.227/src/private/ser.rs /home/michael-lindsay/veristone/target/debug/build/serde-cec6e7806ece626d/out/private.rs
+
+/home/michael-lindsay/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.227/src/lib.rs:
+/home/michael-lindsay/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.227/src/integer128.rs:
+/home/michael-lindsay/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.227/src/private/mod.rs:
+/home/michael-lindsay/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.227/src/private/de.rs:
+/home/michael-lindsay/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.227/src/private/ser.rs:
+/home/michael-lindsay/veristone/target/debug/build/serde-cec6e7806ece626d/out/private.rs:
+
+# env-dep:OUT_DIR=/home/michael-lindsay/veristone/target/debug/build/serde-cec6e7806ece626d/out
