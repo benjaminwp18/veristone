@@ -76,7 +76,9 @@ fn print_blif_components(list: Vec<ParsedPrimitive>) {
             ParsedPrimitive::Subckt { name, conns } => {
                 println!("----Subckt----");
                 println!("Name: {}", name);
-                conns.iter().for_each(|a| println!("{}", a.0));
+                for (key, value) in conns {
+                    println!("{key}: {value}");
+                }
             }
 
             ParsedPrimitive::Module {
