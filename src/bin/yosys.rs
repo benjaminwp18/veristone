@@ -1,19 +1,21 @@
 use clap::Parser;
+use std::path::Path;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
-    /// Name of the person to greet
     #[arg(short, long)]
     verilog: String,
 
-    /// Number of times to greet
-    #[arg(short, long, default_value_t = "mc.lib")]
+    #[arg(short, long, default_value = "res/mc.lib")]
     lib: String,
 }
 
 fn main() {
     let args = Args::parse();
 
-    std::Path
+    let verilog_path = Path::new(&args.verilog);
+    let lib_path = Path::new(&args.lib);
+
+    dbg!(verilog_path, lib_path);
 }
