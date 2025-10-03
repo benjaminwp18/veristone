@@ -1,6 +1,6 @@
 #!/bin/bash
 
-LIBRARY=mc.lib
+LIBRARY=yosys/mc.lib
 
 if [ "$1" = "" ]; then
 	echo "Usage: $0 [input verilog] [library file]"
