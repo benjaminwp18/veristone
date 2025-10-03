@@ -2,6 +2,14 @@
 
 Minecraft Verilog synthesizer
 
+## Usage
+
+```bash
+cargo build
+cargo run --bin yosys -- -s res/verilog/adder.v
+cargo run --bin veristone
+```
+
 ## Stages
  - Verilog -> Yosys -> netlist (graph data structure)
  - Netlist -> our code -> mcfunction
