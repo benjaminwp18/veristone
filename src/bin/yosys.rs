@@ -1,9 +1,9 @@
 use std::path;
 use clap::Parser;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
-fn generate_blif(verilog_path: &Path, lib_path: &Path, blif_path: &Path, verbose: bool) {
+pub fn generate_blif(verilog_path: &Path, lib_path: &Path, blif_path: &Path, verbose: bool) {
     let abs_verilog_path = path::absolute(verilog_path).unwrap().into_os_string().into_string().unwrap();
     let abs_lib_path = path::absolute(lib_path).unwrap().into_os_string().into_string().unwrap();
     let abs_blif_path = path::absolute(blif_path).unwrap().into_os_string().into_string().unwrap();
@@ -43,13 +43,19 @@ struct Args {
     verbose: bool,
 }
 
+pub fn make_blif_path(verilog_path: &Path) -> PathBuf {
+    let filename = verilog_path.file_stem().unwrap().to_owned().into_string().unwrap();
+    let blif_buf = Path::new("res/blif").join(filename + ".blif");
+    return blif_buf;
+}
+
+#[allow(dead_code)]
 fn main() {
     let args = Args::parse();
 
     let verilog_path = Path::new(&args.src);
     let lib_path = Path::new(&args.lib);
-    let filename = verilog_path.file_stem().unwrap().to_owned().into_string().unwrap();
-    let blif_buf = Path::new("res/blif").join(filename + ".blif");
+    let blif_buf = make_blif_path(verilog_path);
     let blif_path = blif_buf.as_path();
 
     generate_blif(verilog_path, lib_path, &blif_path, args.verbose);
