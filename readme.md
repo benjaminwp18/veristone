@@ -18,6 +18,8 @@ cargo run --bin veristone
 ### Rust
  - https://doc.rust-lang.org/stable/rust-by-example/index.html
     - Backup: Python
+### Placement Algorithm(TimberWorf)
+ - https://ee.sharif.edu/~asic/References/Physical%20Design%20Papers/timberwolf-P2.pdf
 
 ### Verilog & Yosys
  - https://yosyshq.net/yosys/
