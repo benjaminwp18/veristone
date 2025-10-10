@@ -1,5 +1,7 @@
 use std::path::Path;
+use blif_parser::primitives::ParsedPrimitive;
 use clap::Parser;
+use petgraph::*;
 
 #[path = "./bin/yosys.rs"]
 mod yosys;
@@ -22,4 +24,3 @@ fn main() {
     yosys::generate_blif(verilog_path, Path::new("res/mc.lib"), blif_path, false);
     read_blif::read_blif(blif_path);
 }
-

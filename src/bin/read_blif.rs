@@ -1,6 +1,7 @@
 use std::path::{self, Path};
 use clap::Parser;
 use blif_parser::*;
+use petgraph::{Graph, Directed};
 use primitives::ParsedPrimitive;
 
 #[derive(Parser, Debug)]
@@ -25,7 +26,36 @@ pub fn read_blif(blif_path: &Path) {
     println!("Reading BLIF file {full_path}");
 
     let list = parser::parse_blif_file(full_path).unwrap();
-    print_blif_components(list);
+    //print_blif_components(list);
+
+    blif_to_graph(list);
+}
+
+#[allow(unused_variables)]
+fn blif_to_graph(list: Vec<ParsedPrimitive>) -> Graph<ParsedPrimitive, (), Directed> {
+    let mut graph: Graph<ParsedPrimitive, (), Directed> = Graph::new();
+
+    for x in list.into_iter() {
+        match x {
+            ParsedPrimitive::NOP => todo!(),
+
+            ParsedPrimitive::Input { name } => todo!(),
+
+            ParsedPrimitive::Output { name } => todo!(),
+
+            ParsedPrimitive::Lut { inputs, output, table } => todo!(),
+
+            ParsedPrimitive::Gate { c, d, q, r, e } => todo!(),
+
+            ParsedPrimitive::Latch { input, output, control, init } => todo!(),
+
+            ParsedPrimitive::Subckt { name, conns } => todo!(),
+
+            ParsedPrimitive::Module { name, inputs, outputs, elems } => todo!(),
+        }
+    }
+
+    graph
 }
 
 #[allow(unused_variables)]
