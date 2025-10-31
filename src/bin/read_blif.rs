@@ -1,7 +1,7 @@
-use std::path::{self, Path};
+use std::{collections::HashMap, hash::Hash, path::{self, Path}};
 use clap::Parser;
 use blif_parser::*;
-use petgraph::{Graph, Directed};
+use petgraph::{graph, Directed};
 use primitives::ParsedPrimitive;
 
 #[derive(Parser, Debug)]
@@ -26,14 +26,56 @@ pub fn read_blif(blif_path: &Path) {
     println!("Reading BLIF file {full_path}");
 
     let list = parser::parse_blif_file(full_path).unwrap();
-    //print_blif_components(list);
+    print_blif_components(list);
 
-    blif_to_graph(list);
+    // blif_to_graph(list);
+}
+
+const INPUT_PORT_NAMES: Vec<&str> = Vec::from(["A", "B"]);
+
+struct Node {
+    node_type: NodeType,
+    name: String
+}
+
+impl Node {
+    fn new(node_type: NodeType, name: String) -> Node {
+        return Node { node_type, name };
+    }
+}
+
+enum NodeType {
+    Input,
+    Output,
+    Gate,
+    Net
 }
 
 #[allow(unused_variables)]
-fn blif_to_graph(list: Vec<ParsedPrimitive>) -> Graph<ParsedPrimitive, (), Directed> {
-    let mut graph: Graph<ParsedPrimitive, (), Directed> = Graph::new();
+fn blif_to_graph(list: Vec<ParsedPrimitive>) -> graph::Graph<ParsedPrimitive, String, Directed> {
+    // graph = new Graph()
+    // nets = new HashTable()
+    // for (gate in blif file) {
+    //     gate_node = new Node()
+    //     gate_node.gate_type = gate.name
+    //     graph.addNode(gate_node)
+    //     for (cnxn in gate.conns) {
+    //         port_node = new Node()
+    //         port_node.port_name = cnxn[0]
+    //         graph.addNode(port_node)
+    //         graph.addEdge(gate_node, port_node)
+    //         if (!nets.hasKey(cnxn[1])) {
+    //             net_node = new Node()
+    //             net_node.name = cnxn[1]
+    //             nets.add(cnxn[1], net_node)
+    //             graph.addNode(net_node)
+    //         }
+    //         graph.addEdge(nets.get(cnxn[1]), port_node)
+    //     }
+    // }
+
+    let mut graph: graph::Graph<Node, String, Directed> = graph::Graph::new();
+    let mut nets: HashMap<String, graph::NodeIndex> = HashMap::new();
 
     for x in list.into_iter() {
         match x {
@@ -49,7 +91,22 @@ fn blif_to_graph(list: Vec<ParsedPrimitive>) -> Graph<ParsedPrimitive, (), Direc
 
             ParsedPrimitive::Latch { input, output, control, init } => todo!(),
 
-            ParsedPrimitive::Subckt { name, conns } => todo!(),
+            ParsedPrimitive::Subckt { name, conns } => {
+                let gate: Node = Node::new(NodeType::Gate, name);
+                let gate_index = graph.add_node(gate);
+
+                for (port_name, net_name) in conns {
+                    let net_index: graph::NodeIndex = if nets.contains_key(&net_name) {
+                        *nets.get(&net_name).unwrap()
+                    }
+                    else {
+                        let net: Node = Node::new(NodeType::Net, net_name);
+                        graph.add_node(net)
+                    };
+
+                    graph.add_edge(gate_index, net_index, port_name);
+                }
+            },
 
             ParsedPrimitive::Module { name, inputs, outputs, elems } => todo!(),
         }
