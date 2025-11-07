@@ -1,4 +1,8 @@
-use std::{collections::HashMap, hash::Hash, path::{self, Path}};
+use std::{
+    collections::HashMap, 
+    path::{self, Path},
+    fmt::{Display, Result, Formatter},
+};
 use clap::Parser;
 use blif_parser::*;
 use petgraph::{graph, Directed};
@@ -26,13 +30,15 @@ pub fn read_blif(blif_path: &Path) {
     println!("Reading BLIF file {full_path}");
 
     let list = parser::parse_blif_file(full_path).unwrap();
-    print_blif_components(list);
+    //print_blif_components(list);
 
-    // blif_to_graph(list);
+    blif_to_graph(list);
 }
 
-const INPUT_PORT_NAMES: Vec<&str> = Vec::from(["A", "B"]);
+// const INPUT_PORT_NAMES: Vec<&str> = Vec::from(["A", "B"]);
 
+
+// Graph & Node implementation
 struct Node {
     node_type: NodeType,
     name: String
@@ -40,7 +46,13 @@ struct Node {
 
 impl Node {
     fn new(node_type: NodeType, name: String) -> Node {
-        return Node { node_type, name };
+        Node { node_type, name }
+    }
+}
+
+impl Display for Node {
+    fn fmt(&self, f: &mut Formatter) -> Result {
+        write!(f, "({}, {})", self.node_type, self.name)
     }
 }
 
@@ -51,8 +63,22 @@ enum NodeType {
     Net
 }
 
+impl Display for NodeType {
+    fn fmt(&self, f: &mut Formatter) -> Result {
+        write!(f, "{}", match self {
+            NodeType::Input => "NodeType::Input",
+            NodeType::Output => "NodeType::Output",
+            NodeType::Gate => "NodeType::Gate",
+            NodeType::Net => "NodeType::Net",
+        })
+    }
+}
+
+
+
+
 #[allow(unused_variables)]
-fn blif_to_graph(list: Vec<ParsedPrimitive>) -> graph::Graph<ParsedPrimitive, String, Directed> {
+fn blif_to_graph(list: Vec<ParsedPrimitive>) -> graph::Graph<Node, String, Directed> {
     // graph = new Graph()
     // nets = new HashTable()
     // for (gate in blif file) {
@@ -73,6 +99,8 @@ fn blif_to_graph(list: Vec<ParsedPrimitive>) -> graph::Graph<ParsedPrimitive, St
     //         graph.addEdge(nets.get(cnxn[1]), port_node)
     //     }
     // }
+    
+    let INPUT_PORT_NAMES: Vec<&str> = Vec::from(["A", "B"]);
 
     let mut graph: graph::Graph<Node, String, Directed> = graph::Graph::new();
     let mut nets: HashMap<String, graph::NodeIndex> = HashMap::new();
@@ -92,6 +120,7 @@ fn blif_to_graph(list: Vec<ParsedPrimitive>) -> graph::Graph<ParsedPrimitive, St
             ParsedPrimitive::Latch { input, output, control, init } => todo!(),
 
             ParsedPrimitive::Subckt { name, conns } => {
+                print!("Subckt");
                 let gate: Node = Node::new(NodeType::Gate, name);
                 let gate_index = graph.add_node(gate);
 
@@ -112,9 +141,16 @@ fn blif_to_graph(list: Vec<ParsedPrimitive>) -> graph::Graph<ParsedPrimitive, St
         }
     }
 
+    for n in graph.node_indices() {
+        print!("{}", &graph[n])
+    };
+
     graph
 }
 
+
+
+// Print blif file items
 #[allow(unused_variables)]
 fn print_blif_components(list: Vec<ParsedPrimitive>) {
     for x in list.into_iter() {
