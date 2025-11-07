@@ -30,9 +30,21 @@ pub fn read_blif(blif_path: &Path) {
     println!("Reading BLIF file {full_path}");
 
     let list = parser::parse_blif_file(full_path).unwrap();
-    //print_blif_components(list);
+    
+    let mut modules: HashMap<String, Module> = Vec::new();
 
-    blif_to_graph(list);
+    for module in list {
+        match module {
+            ParsedPrimitive::Module { name, inputs, outputs, elems } => {
+                modules.add(name, Module { name, inputs, outputs, elems });
+            },
+            _ => print!("not a module")
+        }
+    }
+
+
+
+    //blif_to_graph(list);
 }
 
 // const INPUT_PORT_NAMES: Vec<&str> = Vec::from(["A", "B"]);
@@ -74,6 +86,13 @@ impl Display for NodeType {
     }
 }
 
+struct Module {
+    name: String,
+    inputs: Vec<String>,
+    outputs: Vec<String>,
+    elems: Vec<ParsedPrimitive>
+}
+
 
 
 
@@ -105,19 +124,22 @@ fn blif_to_graph(list: Vec<ParsedPrimitive>) -> graph::Graph<Node, String, Direc
     let mut graph: graph::Graph<Node, String, Directed> = graph::Graph::new();
     let mut nets: HashMap<String, graph::NodeIndex> = HashMap::new();
 
+    
+
+
     for x in list.into_iter() {
         match x {
-            ParsedPrimitive::NOP => todo!(),
+            ParsedPrimitive::NOP => print!("NOP"),
 
-            ParsedPrimitive::Input { name } => todo!(),
+            ParsedPrimitive::Input { name } => print!("Input"),
 
-            ParsedPrimitive::Output { name } => todo!(),
+            ParsedPrimitive::Output { name } => print!("Output"),
 
-            ParsedPrimitive::Lut { inputs, output, table } => todo!(),
+            ParsedPrimitive::Lut { inputs, output, table } => print!("Lut"),
 
-            ParsedPrimitive::Gate { c, d, q, r, e } => todo!(),
+            ParsedPrimitive::Gate { c, d, q, r, e } => print!("Gate"),
 
-            ParsedPrimitive::Latch { input, output, control, init } => todo!(),
+            ParsedPrimitive::Latch { input, output, control, init } => print!("Latch"),
 
             ParsedPrimitive::Subckt { name, conns } => {
                 print!("Subckt");
@@ -137,12 +159,18 @@ fn blif_to_graph(list: Vec<ParsedPrimitive>) -> graph::Graph<Node, String, Direc
                 }
             },
 
-            ParsedPrimitive::Module { name, inputs, outputs, elems } => todo!(),
+            ParsedPrimitive::Module { name, inputs, outputs, elems } => {
+                blif_to_graph(elems);
+            },
+
+            //_ => print!("not work"),
         }
     }
 
+    print!("{}", graph.node_count());
+
     for n in graph.node_indices() {
-        print!("{}", &graph[n])
+        print!("{} ", &graph[n]);
     };
 
     graph
