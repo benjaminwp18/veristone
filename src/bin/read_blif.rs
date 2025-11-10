@@ -131,7 +131,6 @@ fn add_module_to_graph(
                     }
                     else {
                         // We're responsible for edges for simple gates
-                        // TODO: deal with directionality
                         if INPUT_PIN_NAMES.contains(&pin_name.as_str()) {
                             graph.add_edge(net_index, gate_index.unwrap(), pin_name.clone());
                         }
