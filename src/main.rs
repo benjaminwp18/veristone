@@ -1,7 +1,5 @@
 use std::path::Path;
-use blif_parser::primitives::ParsedPrimitive;
 use clap::Parser;
-use petgraph::*;
 
 #[path = "./bin/yosys.rs"]
 mod yosys;

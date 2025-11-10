@@ -1,12 +1,12 @@
 use std::{
-    collections::HashMap, 
-    path::{self, Path},
-    fmt::{Display, Result, Formatter},
+    collections::HashMap, fmt::{Display, Formatter, Result}, path::{self, Path}, fs
 };
 use clap::Parser;
 use blif_parser::*;
 use petgraph::{graph, Directed};
+use petgraph::dot::Dot;
 use primitives::ParsedPrimitive;
+use graphviz_rust::dot_structures;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -29,28 +29,108 @@ pub fn read_blif(blif_path: &Path) {
 
     println!("Reading BLIF file {full_path}");
 
-    let list = parser::parse_blif_file(full_path).unwrap();
-    
-    let mut modules: HashMap<String, Module> = Vec::new();
+    let primitive_list = parser::parse_blif_file(full_path).unwrap();
 
-    for module in list {
+    let mut modules: HashMap<String, Module> = HashMap::new();
+    let mut first_module_name: Option<String> = None;
+
+    for module in primitive_list {
         match module {
             ParsedPrimitive::Module { name, inputs, outputs, elems } => {
-                modules.add(name, Module { name, inputs, outputs, elems });
+                if first_module_name == None {
+                    first_module_name = Some(name.clone())
+                }
+                modules.insert(name.clone(), Module { name: name.clone(), inputs, outputs, elems, inst_count: 0 });
             },
-            _ => print!("not a module")
+            _ => println!("Warning: Not Implemented: Top-level non-module primitive")
         }
     }
 
+    let net_aliases: HashMap<String, String> = HashMap::new();
+    let graph: graph::Graph<Node, String, Directed> = graph::Graph::new();
+    let nets: HashMap<String, graph::NodeIndex> = HashMap::new();
 
+    let new_graph = add_module_to_graph(&first_module_name.unwrap(), modules, graph, nets, net_aliases);
+
+    let graph_dot_str = Dot::new(&new_graph).to_string();
+    println!("{graph_dot_str}");
+    let format = graphviz_rust::cmd::Format::Svg;
+    let graph_svg = graphviz_rust::exec_dot(graph_dot_str, vec![format.into()]).unwrap();
+    let result = fs::write("graph.svg", graph_svg).expect("Writing SVG to file:");
 
     //blif_to_graph(list);
 }
 
+fn add_module_to_graph(
+    module_name: &String,
+    modules: HashMap<String, Module>,
+    mut graph: graph::Graph<Node, String, Directed>,
+    mut nets: HashMap<String, graph::NodeIndex>,
+    net_aliases: HashMap<String, String>
+) -> graph::Graph<Node, String, Directed> {
+    let module = modules.get(module_name).unwrap();
+    let mut local_net_aliases: HashMap<String, String> = HashMap::new();
+    for parsed_primitive in module.elems.iter() {
+        match parsed_primitive {
+            ParsedPrimitive::Subckt { name: subckt_name, conns } => {
+                println!("Processing subcircuit {subckt_name}");
+
+                // TODO: subckt is a module
+
+                // Assume: subckt is a simple gate
+                let gate: Node = Node::new(NodeType::Gate, subckt_name.clone());
+                let gate_index = graph.add_node(gate);
+
+                for (port_name, raw_net_name) in conns {
+                    let true_net_name: &String;
+
+                    if net_aliases.contains_key(raw_net_name) {
+                        // First look in the aliases given to us by the containing module
+                        true_net_name = net_aliases.get(raw_net_name).unwrap();
+                    }
+                    else {
+                        // Then look in our private aliases that guarantee local nets won't collide with nets from other modules
+                        if !local_net_aliases.contains_key(raw_net_name) {
+                            let inst_count = module.inst_count;
+                            let new_alias = format!("{module_name}#{inst_count}.{raw_net_name}");
+                            local_net_aliases.insert(raw_net_name.clone(), new_alias);
+                        }
+                        true_net_name = local_net_aliases.get(raw_net_name).unwrap();
+                    }
+
+                    let net_index: graph::NodeIndex =
+                        if nets.contains_key(true_net_name) {
+                            *nets.get(true_net_name).unwrap()
+                        }
+                        else {
+                            let net: Node = Node::new(NodeType::Net, true_net_name.clone());
+                            let net_index = graph.add_node(net);
+                            nets.insert(true_net_name.clone(), net_index);
+                            net_index
+                        };
+
+                    // TODO: deal with directionality
+                    graph.add_edge(gate_index, net_index, port_name.clone());
+                }
+            },
+
+            ParsedPrimitive::NOP => println!("Warning: Not implemented: NOP"),
+            ParsedPrimitive::Input { name: _ } => println!("Warning: Not implemented: Input"),
+            ParsedPrimitive::Output { name: _ } => println!("Warning: Not implemented: Output"),
+            ParsedPrimitive::Lut { inputs: _, output: _, table: _ } => println!("Ignoring LUT"),
+            ParsedPrimitive::Gate { c: _, d: _, q: _, r: _, e: _ } => println!("Warning: Not implemented: Gate"),
+            ParsedPrimitive::Latch { input: _, output: _, control: _, init: _ } => println!("Warning: Not implemented: Latch"),
+            ParsedPrimitive::Module { name: _, inputs: _, outputs: _, elems: _ } => println!("Warning: Impossible Verilog: nested private module definition?????"),
+        }
+    }
+
+    return graph;
+}
+
 // const INPUT_PORT_NAMES: Vec<&str> = Vec::from(["A", "B"]);
 
-
 // Graph & Node implementation
+#[derive(Debug)]
 struct Node {
     node_type: NodeType,
     name: String
@@ -64,10 +144,12 @@ impl Node {
 
 impl Display for Node {
     fn fmt(&self, f: &mut Formatter) -> Result {
-        write!(f, "({}, {})", self.node_type, self.name)
+        // write!(f, "({}, {})", self.node_type, self.name)
+        write!(f, "{}", self.name)
     }
 }
 
+#[derive(Debug)]
 enum NodeType {
     Input,
     Output,
@@ -90,12 +172,10 @@ struct Module {
     name: String,
     inputs: Vec<String>,
     outputs: Vec<String>,
-    elems: Vec<ParsedPrimitive>
+    elems: Vec<ParsedPrimitive>,
+    inst_count: i32
 }
-
-
-
-
+/*
 #[allow(unused_variables)]
 fn blif_to_graph(list: Vec<ParsedPrimitive>) -> graph::Graph<Node, String, Directed> {
     // graph = new Graph()
@@ -118,31 +198,28 @@ fn blif_to_graph(list: Vec<ParsedPrimitive>) -> graph::Graph<Node, String, Direc
     //         graph.addEdge(nets.get(cnxn[1]), port_node)
     //     }
     // }
-    
+
     let INPUT_PORT_NAMES: Vec<&str> = Vec::from(["A", "B"]);
 
     let mut graph: graph::Graph<Node, String, Directed> = graph::Graph::new();
     let mut nets: HashMap<String, graph::NodeIndex> = HashMap::new();
 
-    
-
-
     for x in list.into_iter() {
         match x {
-            ParsedPrimitive::NOP => print!("NOP"),
+            ParsedPrimitive::NOP => println!("NOP"),
 
-            ParsedPrimitive::Input { name } => print!("Input"),
+            ParsedPrimitive::Input { name } => println!("Input"),
 
-            ParsedPrimitive::Output { name } => print!("Output"),
+            ParsedPrimitive::Output { name } => println!("Output"),
 
-            ParsedPrimitive::Lut { inputs, output, table } => print!("Lut"),
+            ParsedPrimitive::Lut { inputs, output, table } => println!("Lut"),
 
-            ParsedPrimitive::Gate { c, d, q, r, e } => print!("Gate"),
+            ParsedPrimitive::Gate { c, d, q, r, e } => println!("Gate"),
 
-            ParsedPrimitive::Latch { input, output, control, init } => print!("Latch"),
+            ParsedPrimitive::Latch { input, output, control, init } => println!("Latch"),
 
             ParsedPrimitive::Subckt { name, conns } => {
-                print!("Subckt");
+                println!("Subckt");
                 let gate: Node = Node::new(NodeType::Gate, name);
                 let gate_index = graph.add_node(gate);
 
@@ -163,14 +240,14 @@ fn blif_to_graph(list: Vec<ParsedPrimitive>) -> graph::Graph<Node, String, Direc
                 blif_to_graph(elems);
             },
 
-            //_ => print!("not work"),
+            //_ => println!("not work"),
         }
     }
 
-    print!("{}", graph.node_count());
+    println!("{}", graph.node_count());
 
     for n in graph.node_indices() {
-        print!("{} ", &graph[n]);
+        println!("{} ", &graph[n]);
     };
 
     graph
@@ -256,13 +333,13 @@ fn print_blif_components(list: Vec<ParsedPrimitive>) {
                 println!("Name: {}", name);
 
                 //inputs
-                print!("Inputs:");
-                inputs.iter().for_each(|a| print!(" {},", a));
+                println!("Inputs:");
+                inputs.iter().for_each(|a| println!(" {},", a));
                 println!();
 
                 //outputs
-                print!("Outputs:");
-                outputs.iter().for_each(|a| print!(" {},", a));
+                println!("Outputs:");
+                outputs.iter().for_each(|a| println!(" {},", a));
                 println!();
 
                 //elements
@@ -272,3 +349,4 @@ fn print_blif_components(list: Vec<ParsedPrimitive>) {
         }
     }
 }
+*/
