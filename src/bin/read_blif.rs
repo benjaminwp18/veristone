@@ -50,7 +50,7 @@ pub fn read_blif(blif_path: &Path) {
     let graph: graph::Graph<Node, String, Directed> = graph::Graph::new();
     let nets: HashMap<String, graph::NodeIndex> = HashMap::new();
 
-    let new_graph = add_module_to_graph(&first_module_name.unwrap(), modules, graph, nets, net_aliases);
+    let new_graph = add_module_to_graph(&first_module_name.unwrap(), &modules, graph, nets, net_aliases);
 
     let graph_dot_str = Dot::new(&new_graph).to_string();
     println!("{graph_dot_str}");
@@ -61,9 +61,13 @@ pub fn read_blif(blif_path: &Path) {
     //blif_to_graph(list);
 }
 
+// TODO: load this info from a data file that is also used to generate mc.lib
+const INPUT_PIN_NAMES: [&'static str; 4] = ["A", "B", "C", "D"];
+const OUTPUT_PIN_NAMES: [&'static str; 2] = ["Y", "Q"];
+
 fn add_module_to_graph(
     module_name: &String,
-    modules: HashMap<String, Module>,
+    modules: &HashMap<String, Module>,
     mut graph: graph::Graph<Node, String, Directed>,
     mut nets: HashMap<String, graph::NodeIndex>,
     net_aliases: HashMap<String, String>
@@ -75,13 +79,23 @@ fn add_module_to_graph(
             ParsedPrimitive::Subckt { name: subckt_name, conns } => {
                 println!("Processing subcircuit {subckt_name}");
 
-                // TODO: subckt is a module
+                // TODO: actually increment inst counters (probably need a separate data structure)
+                // module.inst_count += 1;
 
-                // Assume: subckt is a simple gate
-                let gate: Node = Node::new(NodeType::Gate, subckt_name.clone());
-                let gate_index = graph.add_node(gate);
+                let subckt_is_module: bool = modules.contains_key(subckt_name);
 
-                for (port_name, raw_net_name) in conns {
+                // Make simple gate node if we can
+                let gate_index: Option<graph::NodeIndex> =
+                    if !subckt_is_module {
+                        let gate: Node = Node::new(NodeType::Gate, subckt_name.clone());
+                        Some(graph.add_node(gate))
+                    }
+                    else { None };
+
+                let mut sub_module_nets: HashMap<String, graph::NodeIndex> = HashMap::new();
+                let mut sub_module_net_aliases: HashMap<String, String> = HashMap::new();
+
+                for (pin_name, raw_net_name) in conns {
                     let true_net_name: &String;
 
                     if net_aliases.contains_key(raw_net_name) {
@@ -109,8 +123,30 @@ fn add_module_to_graph(
                             net_index
                         };
 
-                    // TODO: deal with directionality
-                    graph.add_edge(gate_index, net_index, port_name.clone());
+                    if subckt_is_module {
+                        // Submodule instances only get access to the connections
+                        //  that they request for their pins
+                        sub_module_nets.insert(true_net_name.clone(), net_index);
+                        sub_module_net_aliases.insert(pin_name.clone(), true_net_name.clone());
+                    }
+                    else {
+                        // We're responsible for edges for simple gates
+                        // TODO: deal with directionality
+                        if INPUT_PIN_NAMES.contains(&pin_name.as_str()) {
+                            graph.add_edge(net_index, gate_index.unwrap(), pin_name.clone());
+                        }
+                        else if OUTPUT_PIN_NAMES.contains(&pin_name.as_str()) {
+                            graph.add_edge(gate_index.unwrap(), net_index, pin_name.clone());
+                        }
+                        else {
+                            panic!("Could not identify type of pin {pin_name}");
+                        }
+                    }
+                }
+
+                if subckt_is_module {
+                    // Recurse for module instantiation
+                    graph = add_module_to_graph(subckt_name, modules, graph, sub_module_nets, sub_module_net_aliases);
                 }
             },
 
@@ -126,8 +162,6 @@ fn add_module_to_graph(
 
     return graph;
 }
-
-// const INPUT_PORT_NAMES: Vec<&str> = Vec::from(["A", "B"]);
 
 // Graph & Node implementation
 #[derive(Debug)]
