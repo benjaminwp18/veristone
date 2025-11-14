@@ -13,6 +13,20 @@ library(mc) {
     }
   }
 
+  cell(OR) {
+    area: 4
+    pin(A) {
+      direction: input;
+    }
+    pin(Y) {
+      function: "(A+B)";
+      direction: output;
+    }
+    pin(B) {
+      direction: input;
+    }
+  }
+
   cell(NOT) {
     area: 4
     pin(A) {
