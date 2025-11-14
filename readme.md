@@ -43,7 +43,7 @@ cargo run --bin veristone -- -s res/verilog/adder.v
 ## Setup
 
 ```bash
-sudo apt-get install iverilog yosys
+sudo apt-get install iverilog yosys graphviz
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ```
 
