@@ -47,16 +47,17 @@ pub fn read_blif(blif_path: &Path) {
     }
 
     let net_aliases: HashMap<String, String> = HashMap::new();
-    let graph: graph::Graph<Node, String, Directed> = graph::Graph::new();
-    let nets: HashMap<String, graph::NodeIndex> = HashMap::new();
+    let mut graph: graph::Graph<Node, String, Directed> = graph::Graph::new();
+    let mut nets: HashMap<String, graph::NodeIndex> = HashMap::new();
 
-    let new_graph = add_module_to_graph(&first_module_name.unwrap(), &modules, graph, nets, net_aliases);
+    add_module_to_graph(&first_module_name.unwrap(), &modules, &mut graph, &mut nets, net_aliases);
 
-    let graph_dot_str = Dot::new(&new_graph).to_string();
+    let graph_dot_str = Dot::new(&graph).to_string();
     println!("{graph_dot_str}");
     let format = graphviz_rust::cmd::Format::Svg;
     let graph_svg = graphviz_rust::exec_dot(graph_dot_str, vec![format.into()]).unwrap();
-    let result = fs::write("graph.svg", graph_svg).expect("Writing SVG to file:");
+    let stem = blif_path.file_stem().unwrap().to_str().unwrap();
+    let result = fs::write(format!("graph_{stem}.svg"), graph_svg).expect("Writing SVG to file:");
 
     //blif_to_graph(list);
 }
@@ -68,10 +69,10 @@ const OUTPUT_PIN_NAMES: [&'static str; 2] = ["Y", "Q"];
 fn add_module_to_graph(
     module_name: &String,
     modules: &HashMap<String, Module>,
-    mut graph: graph::Graph<Node, String, Directed>,
-    mut nets: HashMap<String, graph::NodeIndex>,
+    graph: &mut graph::Graph<Node, String, Directed>,
+    nets: &mut HashMap<String, graph::NodeIndex>,
     net_aliases: HashMap<String, String>
-) -> graph::Graph<Node, String, Directed> {
+) {
     let module = modules.get(module_name).unwrap();
     let mut local_net_aliases: HashMap<String, String> = HashMap::new();
     for parsed_primitive in module.elems.iter() {
@@ -145,7 +146,7 @@ fn add_module_to_graph(
 
                 if subckt_is_module {
                     // Recurse for module instantiation
-                    graph = add_module_to_graph(subckt_name, modules, graph, sub_module_nets, sub_module_net_aliases);
+                    add_module_to_graph(subckt_name, modules, graph, &mut sub_module_nets, sub_module_net_aliases);
                 }
             },
 
@@ -158,8 +159,6 @@ fn add_module_to_graph(
             ParsedPrimitive::Module { name: _, inputs: _, outputs: _, elems: _ } => println!("Warning: Impossible Verilog: nested private module definition?????"),
         }
     }
-
-    return graph;
 }
 
 // Graph & Node implementation
