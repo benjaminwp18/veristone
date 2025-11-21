@@ -7,7 +7,7 @@ Minecraft Verilog synthesizer
 ```bash
 cargo build
 cargo run --bin yosys -- -s res/verilog/adder.v
-cargo run --bin veristone
+cargo run --bin veristone -- -s res/verilog/adder.v
 ```
 
 ## Stages
@@ -45,7 +45,7 @@ cargo run --bin veristone
 ## Setup
 
 ```bash
-sudo apt-get install iverilog yosys
+sudo apt-get install iverilog yosys graphviz
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ```
 
