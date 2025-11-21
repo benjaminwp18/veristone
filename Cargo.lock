@@ -636,6 +636,7 @@ dependencies = [
  "clap",
  "graphviz-rust",
  "petgraph",
+ "rand",
 ]
 
 [[package]]

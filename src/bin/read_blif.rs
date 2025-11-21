@@ -162,9 +162,9 @@ fn add_module_to_graph(
 
 // Graph & Node implementation
 #[derive(Debug)]
-struct Node {
-    node_type: NodeType,
-    name: String
+pub struct Node {
+    pub node_type: NodeType,
+    pub name: String
 }
 
 impl Node {
@@ -180,8 +180,8 @@ impl Display for Node {
     }
 }
 
-#[derive(Debug)]
-enum NodeType {
+#[derive(Debug, PartialEq)]
+pub enum NodeType {
     Input,
     Output,
     Gate,
