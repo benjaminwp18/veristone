@@ -3,7 +3,9 @@ use std::fs::File;
 use clap::Parser;
 
 struct Gate {
-    name: String
+    name: String,
+    x: i32,
+    z: i32
 }
 
 #[derive(Parser, Debug)]
@@ -18,26 +20,29 @@ struct Args {
 fn main() {
     // let args: Args = Args::parse();
     // let path = Path::new(&args.src);
-    let path = Path::new("build.mcfunction");
     let and_gate = Gate {
-        name: String::from("and_gate")
+        name: String::from("and"),
+        x: 0,
+        z: 0
     };
-    let not_gate = Gate {
-        name: String::from("not_gate")
+    let not_gate: Gate = Gate {
+        name: String::from("not"),
+        x: 1,
+        z: 4
     };
-    let gates: Vec<(i32, i32, Gate)> = vec![
-        (0, 0, and_gate),
-        (0, 4, not_gate)
+    let gates: Vec<Gate> = vec![
+        and_gate,
+        not_gate
     ];
 
-    create_file(path, gates);
+    create_file(gates);
 }
 
-fn create_file (path: &Path, gates: Vec<(i32, i32, Gate)>) {
+fn create_file (gates: Vec<Gate>) {
+    let path: &Path = Path::new("res/logic_datapack/data/logic/function/build.mcfunction");
     let mut file = File::create(path).unwrap();
 
-    for gate_info in &gates {
-        let (x, y, gate) = gate_info;
-        let _ = file.write(format!("place template logic:{} ~{x} ~-1 ~{y}\n", gate.name).as_bytes());
+    for gate in &gates {
+        let _ = file.write(format!("place template logic:{}_gate ~{} ~ ~{}\n", gate.name, gate.x, gate.z).as_bytes());
     }
 }
