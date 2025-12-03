@@ -6,7 +6,7 @@ Minecraft Verilog synthesizer
 
 ```bash
 cargo build
-cargo run --bin yosys -- -s res/verilog/adder.v
+cargo run --bin make_blif -- -s res/verilog/adder.v
 cargo run --bin veristone -- -s res/verilog/adder.v
 ```
 
