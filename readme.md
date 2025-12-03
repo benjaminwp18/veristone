@@ -44,9 +44,29 @@ cargo run --bin veristone -- -s res/verilog/adder.v
 
 ## Setup
 
+### Debian/Ubuntu (+ other Linux; your package manager probably has these too)
+Install yosys for processing verilog files (+ ICARUS Verilog for SystemVerilog support),
+and graphviz for generating graph views of circuits:
 ```bash
 sudo apt-get install iverilog yosys graphviz
+```
+
+Install Rust:
+```bash
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+```
+
+### Windows
+[Install Rust](https://rust-lang.org/learn/get-started/).
+Extract the [OSS CAD Suite](https://github.com/YosysHQ/oss-cad-suite-build) inside this directory.
+Run the start script to setup your path each time you want to use yosys:
+- Add environment variables to current shell:
+```batch
+oss-cad-suite\environment.bat
+```
+ - Create new shell with vars:
+```batch
+oss-cad-suite\start.bat
 ```
 
 ## Verilog/Yosys notes
