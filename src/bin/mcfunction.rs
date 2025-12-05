@@ -2,29 +2,18 @@ use std::{io::Write, path::Path};
 use std::fs::File;
 use clap::Parser;
 
-struct Gate {
+pub struct Gate {
     name: String,
     x: i32,
     z: i32
 }
 
-struct Wire {
+pub struct Wire {
     start_x: i32,
     start_z: i32,
     end_x: i32,
     end_z: i32
 }
-
-// PlacementAlgo::DumbGrid { num_cols: 4 }, RoutingAlgo::Wireless
-
-// enum PlacementAlgo {
-//     DumbGrid { num_cols: i32 },
-//     // TimberWolf
-// }
-
-// enum RoutingAlgo {
-//     Wireless
-// }
 
 enum WireType {
     Wireless,

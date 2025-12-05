@@ -6,6 +6,9 @@ use blif_parser::*;
 use petgraph::{graph, Directed};
 use petgraph::dot::Dot;
 use primitives::ParsedPrimitive;
+use serde_json::Deserialize;
+
+mod mcfunction;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -19,6 +22,15 @@ fn main() {
     let args = Args::parse();
     let blif_path = Path::new(&args.blif);
     read_blif(blif_path);
+}
+
+enum PlacementAlgo {
+    DumbGrid { num_cols: i32 },
+    // TimberWolf
+}
+
+enum RoutingAlgo {
+    Wireless
 }
 
 #[allow(unused_variables)]
@@ -56,9 +68,37 @@ pub fn read_blif(blif_path: &Path) {
     let format = graphviz_rust::cmd::Format::Svg;
     let graph_svg = graphviz_rust::exec_dot(graph_dot_str, vec![format.into()]).unwrap();
     let stem = blif_path.file_stem().unwrap().to_str().unwrap();
-    let result = fs::write(format!("graph_{stem}.svg"), graph_svg).expect("Writing SVG to file:");
+    fs::write(format!("res/graphs/graph_{stem}.svg"), graph_svg).expect("Writing SVG to file:");
 
-    //blif_to_graph(list);
+    let gates = place(&graph, PlacementAlgo::DumbGrid { num_cols: 4 });
+    let wires = route(&graph, RoutingAlgo::Wireless);  // TODO
+}
+
+fn place(graph: &graph::Graph<Node, String, Directed>, placement_algo: PlacementAlgo) -> Vec<mcfunction::Gate> {
+    let gates: Vec<mcfunction::Gate> = vec![];
+
+    // TODO
+    serde_json::from_reader();
+
+    match placement_algo {
+        PlacementAlgo::DumbGrid { num_cols } => {
+            const CELL_SIZE: i32 = 8;
+            let mut col_idx = 0;
+            let mut row_idx = 0;
+
+            for node_idx in graph.node_indices() {
+                let node_weight = graph.node_weight(node_idx).unwrap();
+                match node_weight.node_type {
+                    NodeType::Gate => {
+                        // TODO
+                    },
+                    _ => { }  // No other nodes included in placement
+                }
+            }
+        }
+    }
+
+    return gates;
 }
 
 // TODO: load this info from a data file that is also used to generate mc.lib
@@ -208,7 +248,7 @@ struct Module {
 }
 
 // Print blif file items
-#[allow(unused_variables)]
+#[allow(unused_variables,unused)]
 fn print_blif_components(list: Vec<ParsedPrimitive>) {
     for x in list.into_iter() {
         match x {
