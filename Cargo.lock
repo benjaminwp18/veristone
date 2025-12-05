@@ -661,6 +661,7 @@ dependencies = [
  "clap",
  "graphviz-rust",
  "petgraph",
+ "serde",
  "serde_json",
 ]
 
