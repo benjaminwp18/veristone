@@ -8,3 +8,6 @@ blif-parser = "0.1.7"
 clap = { version = "4.5", features = ["derive"] }
 petgraph = "0.8.3"
 graphviz-rust = "0.9.6"
+
+[patch.crates-io]
+blif-parser = { git = 'https://github.com/benjaminwp18/blif-parser.git' }
