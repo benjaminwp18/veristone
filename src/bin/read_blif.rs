@@ -1,5 +1,5 @@
 use std::{
-    cell, collections::HashMap, fmt::{Display, Formatter, Result}, fs, path::{self, Path}
+    collections::HashMap, fmt::{Display, Formatter, Result}, fs, path::{self, Path}
 };
 use clap::Parser;
 use blif_parser::*;
@@ -187,7 +187,7 @@ fn place_and_route(
                             });
                         }
                     },
-                    _ => { }  // No other nodes included in placement
+                    _ => { }  // No other nodes included in routing
                 }
             }
         }

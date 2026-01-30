@@ -1,8 +1,8 @@
-place template logic:xor_gate ~1 ~ ~15
 place template logic:or_gate ~1 ~ ~1
+place template logic:and_gate ~1 ~ ~8
 place template logic:and_gate ~8 ~ ~1
 place template logic:xor_gate ~8 ~ ~8
-place template logic:and_gate ~1 ~ ~8
+place template logic:xor_gate ~1 ~ ~15
 setblock ~2 ~-1 ~11 minecraft:redstone_lamp
 setblock ~1 ~-1 ~1 minecraft:target
 setblock ~1 ~-2 ~1 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~1 ~1 ~10 minecraft:redstone_lamp[lit=true] run setblock ~ ~1 ~ minecraft:redstone_block"}
