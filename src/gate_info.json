@@ -1,0 +1,52 @@
+
+{
+    "and": {
+        "xDim": 3,
+        "zDim": 4,
+        "yDim": 2,
+        "inputs": [
+            0, 
+            2
+        ],
+        "output": 1
+    },
+    "or": {
+        "xDim": 3,
+        "zDim": 3,
+        "yDim": 1,
+        "inputs": [
+            0,
+            2
+        ],
+        "output": 1
+    },
+    "not": {
+        "xDim": 1,
+        "zDim": 4,
+        "yDim": 1,
+        "inputs": [
+            0
+        ],
+        "output": 0
+    },
+    "nand": {
+        "xDim": 3,
+        "zDim": 3,
+        "yDim": 2,
+        "inputs": [
+            0,
+            2
+        ],
+        "output": 1
+    },
+    "xor": {
+        "xDim": 3,
+        "zDim": 5,
+        "yDim": 2,
+        "inputs": [
+            0,
+            2
+        ],
+        "output": 1
+    }
+}

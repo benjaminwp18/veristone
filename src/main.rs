@@ -7,6 +7,9 @@ mod make_blif;
 #[path = "./bin/read_blif.rs"]
 mod read_blif;
 
+#[path = "./bin/mcfunction.rs"]
+mod mcfunction;
+
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
