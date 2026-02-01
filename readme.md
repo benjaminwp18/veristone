@@ -6,7 +6,12 @@ Minecraft Verilog synthesizer
 
 ```bash
 cargo build
+
+# Run each step separately
 cargo run --bin make_blif -- -s res/verilog/adder.v
+cargo run --bin read_blif -- -b res/blif/adder.blif
+
+# Run the whole pipeline
 cargo run --bin veristone -- -s res/verilog/adder.v
 ```
 
