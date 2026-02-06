@@ -12,12 +12,12 @@ pub fn generate_blif(verilog_path: &Path, lib_path: &Path, blif_path: &Path, ver
 
     let output = Command::new("yosys")
         .arg("-p")
-        .arg(format!("read_verilog {abs_verilog_path};
+        .arg(format!("read_verilog \"{abs_verilog_path}\";
                       hierarchy -check -auto-top;
                       proc; opt; fsm; opt; memory; opt;
-                      techmap; opt; dfflibmap -liberty {abs_lib_path};
-                      abc -liberty {abs_lib_path};
-                      clean; write_blif {abs_blif_path}"))
+                      techmap; opt; dfflibmap -liberty \"{abs_lib_path}\";
+                      abc -liberty \"{abs_lib_path}\";
+                      clean; write_blif \"{abs_blif_path}\""))
         .output()
         .expect("Failed to generate blif");
     if verbose {
