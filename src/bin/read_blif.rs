@@ -69,27 +69,27 @@ pub fn read_blif(blif_path: &Path) {
     let stem = blif_path.file_stem().unwrap().to_str().unwrap();
     fs::write(format!("res/graphs/graph_{stem}.svg"), graph_svg).expect("Writing SVG to file:");
 
-    let (gates, wires) = place_and_route(&graph, PlacementAlgo::DumbGrid { num_cols: 4 }, RoutingAlgo::Wireless);
+    // Place & route
+    let gate_info = mcfunction::read_gate_info();
+    let gates_map = place(&graph, &gate_info, PlacementAlgo::DumbGrid { num_cols: 4 });
+    let wires = route(&graph, &gates_map, &gate_info, RoutingAlgo::Wireless);
+    let gates = gates_map.into_values().collect();
+
     mcfunction::write_mcfunction(&gates, &wires, mcfunction::WireType::Wireless);
 }
 
-
-
-fn place_and_route(
+fn place(
     graph: &graph::Graph<Node, String, Directed>,
-    placement_algo: PlacementAlgo,
-    routing_algo: RoutingAlgo
-) -> (Vec<mcfunction::Gate>, Vec<mcfunction::Wire>) {
+    gate_info: &HashMap<String, mcfunction::GateInfo>,
+    placement_algo: PlacementAlgo
+) -> HashMap<NodeIndex, mcfunction::Gate> {
     let mut gates: HashMap<NodeIndex, mcfunction::Gate> = HashMap::new();
-    let mut wires: Vec<mcfunction::Wire> = vec![];
-
-    let gate_info: HashMap<String, mcfunction::GateInfo> = mcfunction::read_gate_info();
 
     match placement_algo {
         PlacementAlgo::DumbGrid { num_cols } => {
             const CELL_PADDING: i32 = 1;
             let mut cell_size = 0;
-            for (_, gate_info) in &gate_info {
+            for (_, gate_info) in gate_info {
                 if gate_info.z_dim > cell_size {
                     cell_size = gate_info.z_dim;
                 }
@@ -109,7 +109,7 @@ fn place_and_route(
                         gates.insert(
                             node_idx,
                             mcfunction::Gate {
-                                // TODO: standardize capitalization of gate names/generate lib from
+                                // TODO: standardize capitalization of gate names/generate lib from json
                                 name: node_weight.name.to_lowercase(),
                                 z: col_idx * cell_size + CELL_PADDING,
                                 x: row_idx * cell_size + CELL_PADDING
@@ -126,6 +126,18 @@ fn place_and_route(
             }
         }
     }
+
+    return gates;
+}
+
+
+fn route(
+    graph: &graph::Graph<Node, String, Directed>,
+    gates: &HashMap<NodeIndex, mcfunction::Gate>,
+    gate_info: &HashMap<String, mcfunction::GateInfo>,
+    routing_algo: RoutingAlgo
+) -> Vec<mcfunction::Wire> {
+    let mut wires: Vec<mcfunction::Wire> = vec![];
 
     match routing_algo {
         RoutingAlgo::Wireless => {
@@ -193,7 +205,7 @@ fn place_and_route(
         }
     }
 
-    return (gates.into_values().collect(), wires);
+    return wires;
 }
 
 // TODO: load this info from a data file that is also used to generate mc.lib
