@@ -30,18 +30,18 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ```
 
 ### Windows
-[Install Rust](https://rust-lang.org/learn/get-started/).
-[Install graphviz](https://graphviz.org/download/).
-Extract the [OSS CAD Suite](https://github.com/YosysHQ/oss-cad-suite-build) to its own folder in this repo.
-Run one of the start scripts to setup your path each time you want to use yosys:
- - Add environment variables to current shell:
-```batch
-oss-cad-suite\environment.bat
-```
- - Create new shell with vars:
-```batch
-oss-cad-suite\start.bat
-```
+ - [Install Rust](https://rust-lang.org/learn/get-started/).
+ - [Install MSYS2](https://www.msys2.org/) and the [MinGW-64 compiler pipeline](https://www.mingw-w64.org/getting-started/msys2/) if you haven't already (these are dependencies for Rust compilation).
+ - [Install graphviz](https://graphviz.org/download/).
+ - Extract the [OSS CAD Suite](https://github.com/YosysHQ/oss-cad-suite-build) to its own folder in this repo. Run one of the start scripts to setup your path each time you want to use yosys:
+   - Add environment variables to current shell:
+    ```batch
+    oss-cad-suite\environment.bat
+    ```
+   - Create new shell with vars:
+    ```batch
+    oss-cad-suite\start.bat
+    ```
 
 ## Pipeline Structure
  - Verilog -> [Yosys](https://yosyshq.readthedocs.io/projects/yosys/en/latest/appendix/APPNOTE_010_Verilog_to_BLIF.html) -> [BLIF](https://course.ece.cmu.edu/~ee760/760docs/blif.pdf)
