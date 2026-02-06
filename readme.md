@@ -31,6 +31,7 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
 ### Windows
 [Install Rust](https://rust-lang.org/learn/get-started/).
+[Install graphviz](https://graphviz.org/download/).
 Extract the [OSS CAD Suite](https://github.com/YosysHQ/oss-cad-suite-build) to its own folder in this repo.
 Run one of the start scripts to setup your path each time you want to use yosys:
  - Add environment variables to current shell:
