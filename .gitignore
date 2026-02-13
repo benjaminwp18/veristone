@@ -1,3 +1,8 @@
 target/
-.DS_Store
+
 *.svg
+.DS_Store
+
+# Windows uses OSS CAD Suite to get Yosys binaries
+oss
+oss-cad-suite
