@@ -7,6 +7,9 @@ use petgraph::{graph, Directed};
 use petgraph::dot::Dot;
 use primitives::ParsedPrimitive;
 
+#[path = "../structs.rs"]
+mod structs;
+
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
@@ -46,7 +49,7 @@ pub fn read_blif(blif_path: &Path) {
     }
 
     let net_aliases: HashMap<String, String> = HashMap::new();
-    let mut graph: graph::Graph<Node, String, Directed> = graph::Graph::new();
+    let mut graph: graph::Graph<structs::Node, String, Directed> = graph::Graph::new();
     let mut nets: HashMap<String, graph::NodeIndex> = HashMap::new();
 
     add_module_to_graph(&first_module_name.unwrap(), &modules, &mut graph, &mut nets, net_aliases);
@@ -68,7 +71,7 @@ const OUTPUT_PIN_NAMES: [&'static str; 2] = ["Y", "Q"];
 fn add_module_to_graph(
     module_name: &String,
     modules: &HashMap<String, Module>,
-    graph: &mut graph::Graph<Node, String, Directed>,
+    graph: &mut graph::Graph<structs::Node, String, Directed>,
     nets: &mut HashMap<String, graph::NodeIndex>,
     net_aliases: HashMap<String, String>
 ) {
@@ -87,7 +90,7 @@ fn add_module_to_graph(
                 // Make simple gate node if we can
                 let gate_index: Option<graph::NodeIndex> =
                     if !subckt_is_module {
-                        let gate: Node = Node::new(NodeType::Gate, subckt_name.clone());
+                        let gate: structs::Node = structs::Node::new(structs::NodeType::Gate, subckt_name.clone());
                         Some(graph.add_node(gate))
                     }
                     else { None };
@@ -117,7 +120,7 @@ fn add_module_to_graph(
                             *nets.get(true_net_name).unwrap()
                         }
                         else {
-                            let net: Node = Node::new(NodeType::Net, true_net_name.clone());
+                            let net: structs::Node = structs::Node::new(structs::NodeType::Net, true_net_name.clone());
                             let net_index = graph.add_node(net);
                             nets.insert(true_net_name.clone(), net_index);
                             net_index
@@ -157,45 +160,6 @@ fn add_module_to_graph(
             ParsedPrimitive::Latch { input: _, output: _, control: _, init: _ } => println!("Warning: Not implemented: Latch"),
             ParsedPrimitive::Module { name: _, inputs: _, outputs: _, elems: _ } => println!("Warning: Impossible Verilog: nested private module definition?????"),
         }
-    }
-}
-
-// Graph & Node implementation
-#[derive(Debug)]
-struct Node {
-    node_type: NodeType,
-    name: String
-}
-
-impl Node {
-    fn new(node_type: NodeType, name: String) -> Node {
-        Node { node_type, name }
-    }
-}
-
-impl Display for Node {
-    fn fmt(&self, f: &mut Formatter) -> Result {
-        // write!(f, "({}, {})", self.node_type, self.name)
-        write!(f, "{}", self.name)
-    }
-}
-
-#[derive(Debug)]
-enum NodeType {
-    Input,
-    Output,
-    Gate,
-    Net
-}
-
-impl Display for NodeType {
-    fn fmt(&self, f: &mut Formatter) -> Result {
-        write!(f, "{}", match self {
-            NodeType::Input => "NodeType::Input",
-            NodeType::Output => "NodeType::Output",
-            NodeType::Gate => "NodeType::Gate",
-            NodeType::Net => "NodeType::Net",
-        })
     }
 }
 
