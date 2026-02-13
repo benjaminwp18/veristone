@@ -1,11 +1,13 @@
 use std::{
-    collections::HashMap, fmt::{Display, Formatter, Result}, path::{self, Path}, fs
+    collections::HashMap, fmt::{Display, Formatter, Result}, fs, path::{self, Path}
 };
 use clap::Parser;
 use blif_parser::*;
-use petgraph::{graph, Directed};
+use petgraph::{Directed, graph::{self, NodeIndex}, visit::EdgeRef};
 use petgraph::dot::Dot;
 use primitives::ParsedPrimitive;
+
+mod mcfunction;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -19,6 +21,15 @@ fn main() {
     let args = Args::parse();
     let blif_path = Path::new(&args.blif);
     read_blif(blif_path);
+}
+
+enum PlacementAlgo {
+    DumbGrid { num_cols: i32 },
+    // TimberWolf
+}
+
+enum RoutingAlgo {
+    Wireless
 }
 
 #[allow(unused_variables)]
@@ -56,9 +67,145 @@ pub fn read_blif(blif_path: &Path) {
     let format = graphviz_rust::cmd::Format::Svg;
     let graph_svg = graphviz_rust::exec_dot(graph_dot_str, vec![format.into()]).unwrap();
     let stem = blif_path.file_stem().unwrap().to_str().unwrap();
-    let result = fs::write(format!("graph_{stem}.svg"), graph_svg).expect("Writing SVG to file:");
+    fs::write(format!("res/graphs/graph_{stem}.svg"), graph_svg).expect("Writing SVG to file:");
 
-    //blif_to_graph(list);
+    // Place & route
+    let gate_info = mcfunction::read_gate_info();
+    let gates_map = place(&graph, &gate_info, PlacementAlgo::DumbGrid { num_cols: 4 });
+    let wires = route(&graph, &gates_map, &gate_info, RoutingAlgo::Wireless);
+    let gates = gates_map.into_values().collect();
+
+    mcfunction::write_mcfunction(&gates, &wires, mcfunction::WireType::Wireless);
+}
+
+fn place(
+    graph: &graph::Graph<Node, String, Directed>,
+    gate_info: &HashMap<String, mcfunction::GateInfo>,
+    placement_algo: PlacementAlgo
+) -> HashMap<NodeIndex, mcfunction::Gate> {
+    let mut gates: HashMap<NodeIndex, mcfunction::Gate> = HashMap::new();
+
+    match placement_algo {
+        PlacementAlgo::DumbGrid { num_cols } => {
+            const CELL_PADDING: i32 = 1;
+            let mut cell_size = 0;
+            for (_, gate_info) in gate_info {
+                if gate_info.z_dim > cell_size {
+                    cell_size = gate_info.z_dim;
+                }
+                if gate_info.x_dim > cell_size {
+                    cell_size = gate_info.x_dim;
+                }
+            }
+            cell_size += 2 * CELL_PADDING;
+
+            let mut col_idx = 0;
+            let mut row_idx = 0;
+
+            for node_idx in graph.node_indices() {
+                let node_weight = graph.node_weight(node_idx).unwrap();
+                match node_weight.node_type {
+                    NodeType::Gate => {
+                        gates.insert(
+                            node_idx,
+                            mcfunction::Gate {
+                                // TODO: standardize capitalization of gate names/generate lib from json
+                                name: node_weight.name.to_lowercase(),
+                                z: col_idx * cell_size + CELL_PADDING,
+                                x: row_idx * cell_size + CELL_PADDING
+                            }
+                        );
+                        col_idx += 1;
+                        if col_idx + 1 >= num_cols {
+                            col_idx = 0;
+                            row_idx += 1;
+                        }
+                    },
+                    _ => { }  // No other nodes included in placement
+                }
+            }
+        }
+    }
+
+    return gates;
+}
+
+
+fn route(
+    graph: &graph::Graph<Node, String, Directed>,
+    gates: &HashMap<NodeIndex, mcfunction::Gate>,
+    gate_info: &HashMap<String, mcfunction::GateInfo>,
+    routing_algo: RoutingAlgo
+) -> Vec<mcfunction::Wire> {
+    let mut wires: Vec<mcfunction::Wire> = vec![];
+
+    match routing_algo {
+        RoutingAlgo::Wireless => {
+            let mut input_idx = 0;
+            let mut output_idx = 0;
+
+            for node_idx in graph.node_indices() {
+                let node_weight = graph.node_weight(node_idx).unwrap();
+                match node_weight.node_type {
+                    NodeType::Net => {
+                        let mut start: Option<mcfunction::LabeledPoint> = None;
+                        for edge in graph.edges_directed(node_idx, petgraph::Direction::Incoming) {
+                            let source_gate_meta = gates.get(&edge.source()).unwrap();
+                            let source_gate_info = gate_info.get(&source_gate_meta.name).unwrap();
+                            let source_pin_offset = source_gate_info.outputs.get(edge.weight()).unwrap();
+                            start = Some(mcfunction::LabeledPoint {
+                                x: source_gate_meta.x + source_pin_offset.x,
+                                z: source_gate_meta.z + source_pin_offset.z,
+                                y: -1,
+                                label: Some(format!("{} -> {}", edge.weight(), node_weight.name))
+                            });
+                        }
+                        if start.is_none() {
+                            start = Some(mcfunction::LabeledPoint {
+                                x: -2,
+                                z: input_idx * 2,
+                                y: 0,
+                                label: Some(node_weight.name.clone())
+                            });
+                            input_idx += 1;
+                        }
+
+                        let mut ends: Vec<mcfunction::LabeledPoint> = vec![];
+                        for edge in graph.edges_directed(node_idx, petgraph::Direction::Outgoing) {
+                            let target_gate_meta = gates.get(&edge.target()).unwrap();
+                            let target_gate_info = gate_info.get(&target_gate_meta.name).unwrap();
+                            let target_pin_offset = target_gate_info.inputs.get(edge.weight()).unwrap();
+                            ends.push(mcfunction::LabeledPoint {
+                                x: target_gate_meta.x + target_pin_offset.x,
+                                z: target_gate_meta.z + target_pin_offset.z,
+                                y: -1,
+                                label: Some(format!("{} -> {}", node_weight.name, edge.weight()))
+                            });
+                        }
+                        if ends.len() == 0 {
+                            ends.push(mcfunction::LabeledPoint {
+                                x: -4,
+                                z: output_idx * 2,
+                                y: 0,
+                                label: Some(node_weight.name.clone())
+                            });
+                            output_idx += 1;
+                        }
+
+                        for end in ends {
+                            wires.push(mcfunction::Wire {
+                                start: start.clone().unwrap(),
+                                end: end
+                            });
+                        }
+                    },
+                    _ => { }  // No other nodes included in routing
+                }
+            }
+        }
+    }
+
+    return wires;
 }
 
 // TODO: load this info from a data file that is also used to generate mc.lib
@@ -208,7 +355,7 @@ struct Module {
 }
 
 // Print blif file items
-#[allow(unused_variables)]
+#[allow(unused_variables,unused)]
 fn print_blif_components(list: Vec<ParsedPrimitive>) {
     for x in list.into_iter() {
         match x {
