@@ -9,6 +9,9 @@ use primitives::ParsedPrimitive;
 
 mod mcfunction;
 
+#[path = "../timberwolf.rs"]
+mod timberwolf;
+
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
@@ -25,7 +28,7 @@ fn main() {
 
 enum PlacementAlgo {
     DumbGrid { num_cols: i32 },
-    // TimberWolf
+    TimberWolf
 }
 
 enum RoutingAlgo {
@@ -124,6 +127,9 @@ fn place(
                     _ => { }  // No other nodes included in placement
                 }
             }
+        },
+        PlacementAlgo::TimberWolf => {
+            gates = timberwolf::anneal(graph, gate_info);
         }
     }
 

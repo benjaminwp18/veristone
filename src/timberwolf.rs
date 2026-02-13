@@ -19,7 +19,10 @@ const ALPHA_START: f32 = 0.80;
 const ALPHA_MID: f32 = 0.95;
 const ALPHA_END: f32 = 0.80;
 
-fn anneal(circuit_graph: graph::Graph<read_blif::Node, String, Directed>) -> HashMap<NodeIndex, mcfunction::Gate> {
+fn anneal(
+    circuit_graph: &graph::Graph<read_blif::Node, String, Directed>,
+    gate_info: &HashMap<String, mcfunction::GateInfo>,
+) -> HashMap<NodeIndex, mcfunction::Gate> {
     let mut state = gen_random_state(circuit_graph);
     let mut temperature = TEMP_MAX;
 
@@ -57,13 +60,13 @@ fn accept_prob(delta_cost: f32, temperature: f32) -> f32 {
     return f32::min(1f32, f32::exp(-delta_cost / temperature));
 }
 
-fn gen_random_state(circuit_graph: graph::Graph<read_blif::Node, String, Directed>) -> HashMap<NodeIndex, mcfunction::Gate> {
+fn gen_random_state(circuit_graph: &graph::Graph<read_blif::Node, String, Directed>) -> HashMap<NodeIndex, mcfunction::Gate> {
     let mut state: HashMap<NodeIndex, mcfunction::Gate> = HashMap::new();
 
     for node_idx in circuit_graph.node_indices() {
         let node_weight = circuit_graph.node_weight(node_idx).unwrap();
         if node_weight.node_type == read_blif::NodeType::Gate {
-            state.insert(node_idx, mcfunction::Gate { name: node_weight.name, x: rand::random(), z: rand::random() });
+            state.insert(node_idx, mcfunction::Gate { name: node_weight.name.clone(), x: rand::random(), z: rand::random() });
         }
     }
 
