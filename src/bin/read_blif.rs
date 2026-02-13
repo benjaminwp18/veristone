@@ -78,15 +78,15 @@ pub fn read_blif(blif_path: &Path) {
     let wires = route(&graph, &gates_map, &gate_info, RoutingAlgo::Wireless);
     let gates = gates_map.into_values().collect();
 
-    mcfunction::write_mcfunction(&gates, &wires, mcfunction::WireType::Wireless);
+    mcfunction::write_mcfunction(&gates, &wires, structs::WireType::Wireless);
 }
 
 fn place(
-    graph: &graph::Graph<Node, String, Directed>,
-    gate_info: &HashMap<String, mcfunction::GateInfo>,
+    graph: &graph::Graph<structs::Node, String, Directed>,
+    gate_info: &HashMap<String, structs::GateInfo>,
     placement_algo: PlacementAlgo
-) -> HashMap<NodeIndex, mcfunction::Gate> {
-    let mut gates: HashMap<NodeIndex, mcfunction::Gate> = HashMap::new();
+) -> HashMap<NodeIndex, structs::Gate> {
+    let mut gates: HashMap<NodeIndex, structs::Gate> = HashMap::new();
 
     match placement_algo {
         PlacementAlgo::DumbGrid { num_cols } => {
@@ -108,10 +108,10 @@ fn place(
             for node_idx in graph.node_indices() {
                 let node_weight = graph.node_weight(node_idx).unwrap();
                 match node_weight.node_type {
-                    NodeType::Gate => {
+                    structs::NodeType::Gate => {
                         gates.insert(
                             node_idx,
-                            mcfunction::Gate {
+                            structs::Gate {
                                 // TODO: standardize capitalization of gate names/generate lib from json
                                 name: node_weight.name.to_lowercase(),
                                 z: col_idx * cell_size + CELL_PADDING,
@@ -135,12 +135,12 @@ fn place(
 
 
 fn route(
-    graph: &graph::Graph<Node, String, Directed>,
-    gates: &HashMap<NodeIndex, mcfunction::Gate>,
-    gate_info: &HashMap<String, mcfunction::GateInfo>,
+    graph: &graph::Graph<structs::Node, String, Directed>,
+    gates: &HashMap<NodeIndex, structs::Gate>,
+    gate_info: &HashMap<String, structs::GateInfo>,
     routing_algo: RoutingAlgo
-) -> Vec<mcfunction::Wire> {
-    let mut wires: Vec<mcfunction::Wire> = vec![];
+) -> Vec<structs::Wire> {
+    let mut wires: Vec<structs::Wire> = vec![];
 
     match routing_algo {
         RoutingAlgo::Wireless => {
@@ -150,13 +150,13 @@ fn route(
             for node_idx in graph.node_indices() {
                 let node_weight = graph.node_weight(node_idx).unwrap();
                 match node_weight.node_type {
-                    NodeType::Net => {
-                        let mut start: Option<mcfunction::LabeledPoint> = None;
+                    structs::NodeType::Net => {
+                        let mut start: Option<structs::LabeledPoint> = None;
                         for edge in graph.edges_directed(node_idx, petgraph::Direction::Incoming) {
                             let source_gate_meta = gates.get(&edge.source()).unwrap();
                             let source_gate_info = gate_info.get(&source_gate_meta.name).unwrap();
                             let source_pin_offset = source_gate_info.outputs.get(edge.weight()).unwrap();
-                            start = Some(mcfunction::LabeledPoint {
+                            start = Some(structs::LabeledPoint {
                                 x: source_gate_meta.x + source_pin_offset.x,
                                 z: source_gate_meta.z + source_pin_offset.z,
                                 y: -1,
@@ -164,7 +164,7 @@ fn route(
                             });
                         }
                         if start.is_none() {
-                            start = Some(mcfunction::LabeledPoint {
+                            start = Some(structs::LabeledPoint {
                                 x: -2,
                                 z: input_idx * 2,
                                 y: 0,
@@ -173,12 +173,12 @@ fn route(
                             input_idx += 1;
                         }
 
-                        let mut ends: Vec<mcfunction::LabeledPoint> = vec![];
+                        let mut ends: Vec<structs::LabeledPoint> = vec![];
                         for edge in graph.edges_directed(node_idx, petgraph::Direction::Outgoing) {
                             let target_gate_meta = gates.get(&edge.target()).unwrap();
                             let target_gate_info = gate_info.get(&target_gate_meta.name).unwrap();
                             let target_pin_offset = target_gate_info.inputs.get(edge.weight()).unwrap();
-                            ends.push(mcfunction::LabeledPoint {
+                            ends.push(structs::LabeledPoint {
                                 x: target_gate_meta.x + target_pin_offset.x,
                                 z: target_gate_meta.z + target_pin_offset.z,
                                 y: -1,
@@ -186,7 +186,7 @@ fn route(
                             });
                         }
                         if ends.len() == 0 {
-                            ends.push(mcfunction::LabeledPoint {
+                            ends.push(structs::LabeledPoint {
                                 x: -4,
                                 z: output_idx * 2,
                                 y: 0,
@@ -196,7 +196,7 @@ fn route(
                         }
 
                         for end in ends {
-                            wires.push(mcfunction::Wire {
+                            wires.push(structs::Wire {
                                 start: start.clone().unwrap(),
                                 end: end
                             });

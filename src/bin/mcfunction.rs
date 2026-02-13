@@ -2,51 +2,13 @@ use std::{io::Write, path::Path};
 use std::fs::File;
 use clap::Parser;
 use serde_json;
-use serde::Deserialize;
 use std::collections::HashMap;
 use std::fs;
 
-pub struct Gate {
-    pub name: String,
-    pub x: i32,
-    pub z: i32
-}
+#[path = "../structs.rs"]
+mod structs;
 
-#[derive(Clone, Debug)]
-pub struct LabeledPoint {
-    pub x: i32,
-    pub z: i32,
-    pub y: i32,
-    pub label: Option<String>
-}
-
-pub struct Wire {
-    pub start: LabeledPoint,
-    pub end: LabeledPoint
-}
-
-pub enum WireType {
-    Wireless,
-    Redstone
-}
-
-#[derive(Debug, Deserialize, Clone)]
-pub struct Point {
-    pub x: i32,
-    pub z: i32
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct GateInfo {
-    pub x_dim: i32,
-    pub z_dim: i32,
-    pub y_dim: i32,
-    pub inputs: HashMap<String, Point>,
-    pub outputs: HashMap<String, Point>,
-}
-
-pub fn read_gate_info() -> HashMap<String, GateInfo> {
+pub fn read_gate_info() -> HashMap<String, structs::GateInfo> {
     let gate_info_str = fs::read_to_string("res/gate_info.json").expect("Failed to read gate info file");
     return serde_json::from_str(&gate_info_str).expect("Gate info JSON not well formatted");
 }
@@ -64,30 +26,30 @@ const MCFUNCTION_PATH: &'static str = "res/logic_datapack/data/logic/function/bu
 fn main() {
     // let args: Args = Args::parse();
     // let path = Path::new(&args.src);
-    let and_gate = Gate {
+    let and_gate = structs::Gate {
         name: String::from("and"),
         x: 0,
         z: 0
     };
-    let not_gate: Gate = Gate {
+    let not_gate: structs::Gate = structs::Gate {
         name: String::from("not"),
         x: 0,
         z: 8
     };
-    let gates: Vec<Gate> = vec![
+    let gates: Vec<structs::Gate> = vec![
         and_gate,
         not_gate
     ];
 
-    let wires: Vec<Wire> = vec![
-        Wire {
-            start: LabeledPoint {
+    let wires: Vec<structs::Wire> = vec![
+        structs::Wire {
+            start: structs::LabeledPoint {
                 x: 1,
                 z: 4,
                 y: 0,
                 label: Some("start".to_string())
             },
-            end: LabeledPoint {
+            end: structs::LabeledPoint {
                 x: 0,
                 z: 7,
                 y: 0,
@@ -96,13 +58,13 @@ fn main() {
         }
     ];
 
-    write_mcfunction(&gates, &wires, WireType::Wireless);
+    write_mcfunction(&gates, &wires, structs::WireType::Wireless);
 }
 
 pub fn write_mcfunction(
-    gates: &Vec<Gate>,
-    wires: &Vec<Wire>,
-    wire_type: WireType
+    gates: &Vec<structs::Gate>,
+    wires: &Vec<structs::Wire>,
+    wire_type: structs::WireType
 ) {
     let path: &Path = Path::new(MCFUNCTION_PATH);
     let mut file = File::create(path).unwrap();
@@ -114,11 +76,11 @@ pub fn write_mcfunction(
 
     for wire in wires {
         match wire_type {
-            WireType::Redstone => {
+            structs::WireType::Redstone => {
                 panic!("TODO: straight-line only redstone wire??");
                 // writeln!(file, "fill ~{} ~ ~{} ~{} ~ ~{} minecraft:redstone_wire", wire.start.x, wire.start.z, wire.end.x, wire.end.x).expect(file_error);
             },
-            WireType::Wireless => {
+            structs::WireType::Wireless => {
                 let relative_start_x = wire.start.x - wire.end.x;
                 let relative_start_z = wire.start.z - wire.end.z;
 
