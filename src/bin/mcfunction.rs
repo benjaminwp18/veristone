@@ -9,7 +9,8 @@ use std::fs;
 pub struct Gate {
     pub name: String,
     pub x: i32,
-    pub z: i32
+    pub z: i32,
+    pub y: i32
 }
 
 #[derive(Clone, Debug)]
@@ -67,12 +68,14 @@ fn main() {
     let and_gate = Gate {
         name: String::from("and"),
         x: 0,
-        z: 0
+        z: 0,
+        y: 0
     };
     let not_gate: Gate = Gate {
         name: String::from("not"),
         x: 0,
-        z: 8
+        z: 8,
+        y: 0
     };
     let gates: Vec<Gate> = vec![
         and_gate,
@@ -112,13 +115,90 @@ pub fn write_mcfunction(
         writeln!(file, "place template logic:{}_gate ~{} ~ ~{}", gate.name, gate.x, gate.z).expect(file_error);
     }
 
-    for wire in wires {
-        match wire_type {
-            WireType::Redstone => {
-                panic!("TODO: straight-line only redstone wire??");
-                // writeln!(file, "fill ~{} ~ ~{} ~{} ~ ~{} minecraft:redstone_wire", wire.start.x, wire.start.z, wire.end.x, wire.end.x).expect(file_error);
-            },
-            WireType::Wireless => {
+    match wire_type {
+        WireType::Redstone => {
+            // Find size of allowed volume for wires
+            let mut x_min: i32 =  2147483647;
+            let mut x_max: i32 = -2147483647;
+            let mut z_min: i32 =  2147483647;
+            let mut z_max: i32 = -2147483647;
+
+            for wire in wires { // scuffed loop for dimensions
+                if wire.start.x < x_min {
+                    x_min = wire.start.x;
+                }
+                if wire.start.x > x_max {
+                    x_min = wire.start.x;
+                }
+                if wire.start.z < z_min {
+                    z_min = wire.start.z;
+                }
+                if wire.start.z > z_max {
+                    x_min = wire.start.z;
+                }
+                if wire.end.x < x_min {
+                    x_min = wire.end.x;
+                }
+                if wire.end.x > x_max {
+                    x_min = wire.end.x;
+                }
+                if wire.end.z < z_min {
+                    z_min = wire.end.z;
+                }
+                if wire.end.z > z_max {
+                    z_min = wire.end.z;
+                }
+            }
+        
+            // volume formatted [x][y][z] as per minecraft standard 
+            let x_size: usize = (x_max - x_min).try_into().unwrap();
+            let z_size: usize = (z_max - z_min).try_into().unwrap();
+            let y_size: usize = (if x_size < z_size { z_size * 2 } else { x_size * 2 }).try_into().unwrap();
+
+            let mut wire_volume: Vec<Vec<Vec<i32>>> = vec![vec![vec![0; x_size]; y_size]; z_size];
+            
+            let gate_info = read_gate_info();
+
+            for gate in gates {
+                let info = gate_info.get(&gate.name).unwrap();
+                
+                for i in 0..info.x_dim {
+                    if gate.x + i < wire_volume.capacity() {
+                        wire_volume
+                            [(gate.x + i) as usize]
+                            [gate.y as usize]
+                            [gate.z as usize] 
+                        = -1;
+                    }
+                }
+                for i in 0..info.z_dim {
+                    if gate.z + i < wire_volume[0][0].capacity() {
+                        wire_volume
+                            [gate.x as usize]
+                            [gate.y as usize]
+                            [(gate.z + i) as usize] 
+                        = -1;
+                    }
+                }
+                for i in 0..info.y_dim {
+                    if gate.y + i < wire_volume[0].capacity() {
+                        wire_volume
+                            [gate.x as usize]
+                            [(gate.y + i) as usize]
+                            [gate.z as usize]
+                        = -1;
+                    }
+                }
+            }
+
+
+            for wire in wires {
+                
+            }
+            // writeln!(file, "fill ~{} ~ ~{} ~{} ~ ~{} minecraft:redstone_wire", wire.start.x, wire.start.z, wire.end.x, wire.end.x).expect(file_error);
+        },
+        WireType::Wireless => {
+            for wire in wires {
                 let relative_start_x = wire.start.x - wire.end.x;
                 let relative_start_z = wire.start.z - wire.end.z;
 

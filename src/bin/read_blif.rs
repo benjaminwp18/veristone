@@ -29,7 +29,8 @@ enum PlacementAlgo {
 }
 
 enum RoutingAlgo {
-    Wireless
+    Wireless,
+    //Propogation
 }
 
 #[allow(unused_variables)]
@@ -112,7 +113,8 @@ fn place(
                                 // TODO: standardize capitalization of gate names/generate lib from json
                                 name: node_weight.name.to_lowercase(),
                                 z: col_idx * cell_size + CELL_PADDING,
-                                x: row_idx * cell_size + CELL_PADDING
+                                x: row_idx * cell_size + CELL_PADDING,
+                                y: 0
                             }
                         );
                         col_idx += 1;
@@ -202,7 +204,18 @@ fn route(
                     _ => { }  // No other nodes included in routing
                 }
             }
-        }
+        },
+        /*RoutingAlgo::Propogation => {
+            for node_idx in graph.node_indices() {
+                let node_weight = graph.node_weight(node_idx).unwrap();
+                match node_weight.node_type {
+                    NodeType::Net => {
+                        
+                    }
+                    _ => { }  // No other nodes included in routing
+                }
+            }
+        }*/
     }
 
     return wires;
