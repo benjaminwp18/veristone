@@ -149,25 +149,25 @@ pub fn write_mcfunction(
                     z_min = wire.end.z;
                 }
             }
-        
-            // volume formatted [x][y][z] as per minecraft standard 
+
+            // volume formatted [x][y][z] as per minecraft standard
             let x_size: usize = (x_max - x_min).try_into().unwrap();
             let z_size: usize = (z_max - z_min).try_into().unwrap();
             let y_size: usize = (if x_size < z_size { z_size * 2 } else { x_size * 2 }).try_into().unwrap();
 
             let mut wire_volume: Vec<Vec<Vec<i32>>> = vec![vec![vec![0; x_size]; y_size]; z_size];
-            
+
             let gate_info = read_gate_info();
 
             for gate in gates {
                 let info = gate_info.get(&gate.name).unwrap();
-                
+
                 for i in 0..info.x_dim {
                     if gate.x + i < wire_volume.capacity() {
                         wire_volume
                             [(gate.x + i) as usize]
                             [gate.y as usize]
-                            [gate.z as usize] 
+                            [gate.z as usize]
                         = -1;
                     }
                 }
@@ -176,7 +176,7 @@ pub fn write_mcfunction(
                         wire_volume
                             [gate.x as usize]
                             [gate.y as usize]
-                            [(gate.z + i) as usize] 
+                            [(gate.z + i) as usize]
                         = -1;
                     }
                 }
@@ -193,7 +193,7 @@ pub fn write_mcfunction(
 
 
             for wire in wires {
-                
+
             }
             // writeln!(file, "fill ~{} ~ ~{} ~{} ~ ~{} minecraft:redstone_wire", wire.start.x, wire.start.z, wire.end.x, wire.end.x).expect(file_error);
         },

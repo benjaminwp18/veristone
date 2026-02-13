@@ -141,81 +141,66 @@ fn route(
 ) -> Vec<mcfunction::Wire> {
     let mut wires: Vec<mcfunction::Wire> = vec![];
 
-    match routing_algo {
-        RoutingAlgo::Wireless => {
-            let mut input_idx = 0;
-            let mut output_idx = 0;
+    let mut input_idx = 0;
+    let mut output_idx = 0;
 
-            for node_idx in graph.node_indices() {
-                let node_weight = graph.node_weight(node_idx).unwrap();
-                match node_weight.node_type {
-                    NodeType::Net => {
-                        let mut start: Option<mcfunction::LabeledPoint> = None;
-                        for edge in graph.edges_directed(node_idx, petgraph::Direction::Incoming) {
-                            let source_gate_meta = gates.get(&edge.source()).unwrap();
-                            let source_gate_info = gate_info.get(&source_gate_meta.name).unwrap();
-                            let source_pin_offset = source_gate_info.outputs.get(edge.weight()).unwrap();
-                            start = Some(mcfunction::LabeledPoint {
-                                x: source_gate_meta.x + source_pin_offset.x,
-                                z: source_gate_meta.z + source_pin_offset.z,
-                                y: -1,
-                                label: Some(format!("{} -> {}", edge.weight(), node_weight.name))
-                            });
-                        }
-                        if start.is_none() {
-                            start = Some(mcfunction::LabeledPoint {
-                                x: -2,
-                                z: input_idx * 2,
-                                y: 0,
-                                label: Some(node_weight.name.clone())
-                            });
-                            input_idx += 1;
-                        }
-
-                        let mut ends: Vec<mcfunction::LabeledPoint> = vec![];
-                        for edge in graph.edges_directed(node_idx, petgraph::Direction::Outgoing) {
-                            let target_gate_meta = gates.get(&edge.target()).unwrap();
-                            let target_gate_info = gate_info.get(&target_gate_meta.name).unwrap();
-                            let target_pin_offset = target_gate_info.inputs.get(edge.weight()).unwrap();
-                            ends.push(mcfunction::LabeledPoint {
-                                x: target_gate_meta.x + target_pin_offset.x,
-                                z: target_gate_meta.z + target_pin_offset.z,
-                                y: -1,
-                                label: Some(format!("{} -> {}", node_weight.name, edge.weight()))
-                            });
-                        }
-                        if ends.len() == 0 {
-                            ends.push(mcfunction::LabeledPoint {
-                                x: -4,
-                                z: output_idx * 2,
-                                y: 0,
-                                label: Some(node_weight.name.clone())
-                            });
-                            output_idx += 1;
-                        }
-
-                        for end in ends {
-                            wires.push(mcfunction::Wire {
-                                start: start.clone().unwrap(),
-                                end: end
-                            });
-                        }
-                    },
-                    _ => { }  // No other nodes included in routing
+    for node_idx in graph.node_indices() {
+        let node_weight = graph.node_weight(node_idx).unwrap();
+        match node_weight.node_type {
+            NodeType::Net => {
+                let mut start: Option<mcfunction::LabeledPoint> = None;
+                for edge in graph.edges_directed(node_idx, petgraph::Direction::Incoming) {
+                    let source_gate_meta = gates.get(&edge.source()).unwrap();
+                    let source_gate_info = gate_info.get(&source_gate_meta.name).unwrap();
+                    let source_pin_offset = source_gate_info.outputs.get(edge.weight()).unwrap();
+                    start = Some(mcfunction::LabeledPoint {
+                        x: source_gate_meta.x + source_pin_offset.x,
+                        z: source_gate_meta.z + source_pin_offset.z,
+                        y: -1,
+                        label: Some(format!("{} -> {}", edge.weight(), node_weight.name))
+                    });
                 }
-            }
-        },
-        /*RoutingAlgo::Propogation => {
-            for node_idx in graph.node_indices() {
-                let node_weight = graph.node_weight(node_idx).unwrap();
-                match node_weight.node_type {
-                    NodeType::Net => {
-                        
-                    }
-                    _ => { }  // No other nodes included in routing
+                if start.is_none() {
+                    start = Some(mcfunction::LabeledPoint {
+                        x: -2,
+                        z: input_idx * 2,
+                        y: 0,
+                        label: Some(node_weight.name.clone())
+                    });
+                    input_idx += 1;
                 }
-            }
-        }*/
+
+                let mut ends: Vec<mcfunction::LabeledPoint> = vec![];
+                for edge in graph.edges_directed(node_idx, petgraph::Direction::Outgoing) {
+                    let target_gate_meta = gates.get(&edge.target()).unwrap();
+                    let target_gate_info = gate_info.get(&target_gate_meta.name).unwrap();
+                    let target_pin_offset = target_gate_info.inputs.get(edge.weight()).unwrap();
+                    ends.push(mcfunction::LabeledPoint {
+                        x: target_gate_meta.x + target_pin_offset.x,
+                        z: target_gate_meta.z + target_pin_offset.z,
+                        y: -1,
+                        label: Some(format!("{} -> {}", node_weight.name, edge.weight()))
+                    });
+                }
+                if ends.len() == 0 {
+                    ends.push(mcfunction::LabeledPoint {
+                        x: -4,
+                        z: output_idx * 2,
+                        y: 0,
+                        label: Some(node_weight.name.clone())
+                    });
+                    output_idx += 1;
+                }
+
+                for end in ends {
+                    wires.push(mcfunction::Wire {
+                        start: start.clone().unwrap(),
+                        end: end
+                    });
+                }
+            },
+            _ => { }  // No other nodes included in routing
+        }
     }
 
     return wires;
