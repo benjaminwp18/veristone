@@ -123,32 +123,15 @@ pub fn write_mcfunction(
             let mut z_min: i32 =  2147483647;
             let mut z_max: i32 = -2147483647;
 
-            for wire in wires { // scuffed loop for dimensions
-                if wire.start.x < x_min {
-                    x_min = wire.start.x;
-                }
-                if wire.start.x > x_max {
-                    x_min = wire.start.x;
-                }
-                if wire.start.z < z_min {
-                    z_min = wire.start.z;
-                }
-                if wire.start.z > z_max {
-                    x_min = wire.start.z;
-                }
-                if wire.end.x < x_min {
-                    x_min = wire.end.x;
-                }
-                if wire.end.x > x_max {
-                    x_min = wire.end.x;
-                }
-                if wire.end.z < z_min {
-                    z_min = wire.end.z;
-                }
-                if wire.end.z > z_max {
-                    z_min = wire.end.z;
-                }
-            }
+
+            let xs = wires.iter().map(|wire| vec![wire.start.x, wire.end.x]).flatten();
+            let x_max = xs.max().unwrap();
+            let x_min = xs.min().unwrap();
+
+            let zs = wires.iter().map(|wire| vec![wire.start.z, wire.end.z]).flatten();
+            let z_max = zs.max().unwrap();
+            let z_min = zs.min().unwrap();
+
 
             // volume formatted [x][y][z] as per minecraft standard
             let x_size: usize = (x_max - x_min).try_into().unwrap();
@@ -163,7 +146,7 @@ pub fn write_mcfunction(
                 let info = gate_info.get(&gate.name).unwrap();
 
                 for i in 0..info.x_dim {
-                    if gate.x + i < wire_volume.capacity() {
+                    if gate.x + i as usize < wire_volume.capacity() {
                         wire_volume
                             [(gate.x + i) as usize]
                             [gate.y as usize]
