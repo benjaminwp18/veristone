@@ -7,7 +7,7 @@ use petgraph::{Directed, graph::{self, NodeIndex}, visit::EdgeRef};
 use petgraph::dot::Dot;
 use primitives::ParsedPrimitive;
 
-use crate::mcfunction;
+use crate::{mcfunction, timberwolf};
 
 // TODO: load this info from a data file that is also used to generate mc.lib
 const INPUT_PIN_NAMES: [&'static str; 4] = ["A", "B", "C", "D"];
@@ -53,7 +53,7 @@ impl Display for NodeType {
 
 pub enum PlacementAlgo {
     DumbGrid { num_cols: i32 },
-    // TimberWolf
+    TimberWolf
 }
 
 // name, inputs, and outputs are included by blif_parser
@@ -260,6 +260,9 @@ fn place_gates(
                     _ => { }  // No other nodes included in placement
                 }
             }
+        },
+        PlacementAlgo::TimberWolf => {
+            gates = timberwolf::anneal(graph, gate_info);
         }
     }
 
