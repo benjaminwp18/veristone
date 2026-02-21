@@ -3,9 +3,6 @@ use clap::Parser;
 
 use veristone::read_blif;
 
-#[path = "../timberwolf.rs"]
-mod timberwolf;
-
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
@@ -17,5 +14,5 @@ struct Args {
 fn main() {
     let args = Args::parse();
     let blif_path = Path::new(&args.blif);
-    read_blif::read_blif(blif_path, read_blif::PlacementAlgo::DumbGrid { num_cols: 4 });
+    read_blif::read_blif(blif_path, read_blif::PlacementAlgo::TimberWolf);
 }

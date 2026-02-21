@@ -2,7 +2,8 @@ use petgraph::{graph::{self, NodeIndex}, Directed};
 use std::{collections::HashMap};
 use rand::{Rng, seq::IndexedRandom};
 
-use crate::{read_blif, mcfunction};
+use crate::read_blif;
+use crate::mcfunction;
 
 const K_MAX: i32 = 200;
 
