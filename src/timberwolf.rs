@@ -1,12 +1,9 @@
 use petgraph::{graph::{self, NodeIndex}, Directed};
-use std::{collections::HashMap, vec};
-use rand::prelude::*;
+use std::{collections::HashMap};
+use rand::{Rng, seq::IteratorRandom};
 
-#[path = "./bin/mcfunction.rs"]
-mod mcfunction;
-
-#[path = "./bin/read_blif.rs"]
-mod read_blif;
+use crate::mcfunction;
+use crate::read_blif;
 
 const K_MAX: i32 = 200;
 
@@ -18,6 +15,24 @@ const TEMP_MIN: f32 = 0.001;
 const ALPHA_START: f32 = 0.80;
 const ALPHA_MID: f32 = 0.95;
 const ALPHA_END: f32 = 0.80;
+
+const COORD_MIN: i32 = 0;
+const COORD_MAX: i32 = 100;
+
+struct State {
+    idxs: Vec<NodeIndex>,
+    gates: HashMap<NodeIndex, mcfunction::Gate>
+}
+
+impl State {
+    fn random_gate(&self) -> &mcfunction::Gate {
+        self.gates.get(&self.idxs[rand::rng().random_range(0..=self.idxs.len())]).unwrap()
+    }
+
+    fn clone(&self) -> State {
+        return State { idxs: self.idxs, gates: self.gates.clone() }
+    }
+}
 
 fn anneal(
     circuit_graph: &graph::Graph<read_blif::Node, String, Directed>,
@@ -37,7 +52,24 @@ fn anneal(
         }
     }
 
-    return state;
+    return state.gates;
+}
+
+fn perturb(current_state: HashMap<NodeIndex, mcfunction::Gate>) {
+    let new_state = current_state.clone();
+    new_state.get_mut(k)
+
+    match rand::rng().random_range(0..=1) {
+        0 => {
+            // Move
+            let gate: &mut mcfunction::Gate = new_state.values().choose_stable(&mut rand::rng()).unwrap();
+            gate.x += rand::rng().random_range(-3..=3);
+        },
+        _ => {
+            // Swap
+        }
+        // TODO: rotate/flip gates?
+    }
 }
 
 fn temperature_multiplier(current_temperature: f32) -> f32 {
@@ -60,17 +92,28 @@ fn accept_prob(delta_cost: f32, temperature: f32) -> f32 {
     return f32::min(1f32, f32::exp(-delta_cost / temperature));
 }
 
-fn gen_random_state(circuit_graph: &graph::Graph<read_blif::Node, String, Directed>) -> HashMap<NodeIndex, mcfunction::Gate> {
-    let mut state: HashMap<NodeIndex, mcfunction::Gate> = HashMap::new();
+fn gen_random_state(circuit_graph: &graph::Graph<read_blif::Node, String, Directed>) -> State {
+    let mut idx_vec: Vec<NodeIndex> = vec![];
+    let mut gates: HashMap<NodeIndex, mcfunction::Gate> = HashMap::new();
 
     for node_idx in circuit_graph.node_indices() {
         let node_weight = circuit_graph.node_weight(node_idx).unwrap();
-        if node_weight.node_type == read_blif::NodeType::Gate {
-            state.insert(node_idx, mcfunction::Gate { name: node_weight.name.clone(), x: rand::random(), z: rand::random() });
+        match node_weight.node_type {
+            read_blif::NodeType::Gate => {
+                gates.insert(node_idx, mcfunction::Gate {
+                    name: node_weight.name.clone(),
+                    x: rand::rng().random_range(COORD_MIN..=COORD_MAX),
+                    z: rand::rng().random_range(COORD_MIN..=COORD_MAX),
+                });
+            },
+            _ => ()  // Placement states only include gates
         }
     }
 
-    return state;
+    return State {
+        idxs: &idx_vec,
+        gates
+    };
 }
 
 // function accept_prob(delta_cost, T) {

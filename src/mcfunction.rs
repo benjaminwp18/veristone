@@ -7,6 +7,7 @@ use serde::Deserialize;
 
 const MCFUNCTION_PATH: &'static str = "res/logic_datapack/data/logic/function/build.mcfunction";
 
+#[derive(Clone)]
 pub struct Gate {
     pub name: String,
     pub x: i32,
