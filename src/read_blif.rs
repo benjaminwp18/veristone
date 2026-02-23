@@ -248,7 +248,8 @@ fn place_gates(
                                 // TODO: standardize capitalization of gate names/generate lib from json
                                 name: node_weight.name.to_lowercase(),
                                 z: col_idx * cell_size + CELL_PADDING,
-                                x: row_idx * cell_size + CELL_PADDING
+                                x: row_idx * cell_size + CELL_PADDING,
+                                y: 0
                             }
                         );
                         col_idx += 1;

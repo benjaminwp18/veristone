@@ -45,7 +45,44 @@ pub struct GateInfo {
 }
 
 pub enum RoutingAlgo {
-    Wireless
+    Wireless,
+    Lee
+}
+
+#[derive(Debug, Deserialize, Clone)]
+enum BlockState {
+    Empty,      // Any air block in the volume
+    Redstone,   // Block containing redstone components
+    Block,      // Block used for connecting gates
+    Gate        // Any block that is occupied by the volume of a gate
+}
+
+struct Grid {
+    min: Point,    // defined as bottom left in the x-z axis
+    max: Point,    // defined as top right in the x-z axis
+    x_size: usize,
+    y_size: usize,
+    z_size: usize,
+    grid: Vec<Vec<Vec<BlockState>>>
+}
+
+impl Grid {
+    fn new(min: Point, max: Point) -> Grid {
+        let x_size: usize = (max.x - min.x).abs().try_into().unwrap();
+        let z_size: usize = (max.z - min.z).abs().try_into().unwrap();
+        let y_size: usize = (if x_size < z_size { z_size * 2 } else { x_size * 2 }).try_into().unwrap();
+
+        Grid { min: min, max: max, x_size:x_size, y_size:y_size, z_size:z_size, grid: vec![vec![vec![BlockState::Empty; x_size]; y_size]; z_size] }
+    }
+
+    fn set(&mut self, point: Point, state: BlockState) {
+        self.grid
+            [(point.x - self.min.x) as usize]
+            [point.y as usize]
+            [(point.z - self.min.z) as usize]
+        = state;
+
+    }
 }
 
 pub fn read_gate_info() -> HashMap<String, GateInfo> {
@@ -56,7 +93,7 @@ pub fn read_gate_info() -> HashMap<String, GateInfo> {
 pub fn write_mcfunction(
     gates: &Vec<Gate>,
     wires: &Vec<Wire>,
-    wire_type: WireType
+    routing_algo :RoutingAlgo
 ) {
     let path: &Path = Path::new(MCFUNCTION_PATH);
     let mut file = File::create(path).unwrap();
@@ -66,62 +103,35 @@ pub fn write_mcfunction(
         writeln!(file, "place template logic:{}_gate ~{} ~ ~{}", gate.name, gate.x, gate.z).expect(file_error);
     }
 
-    match wire_type {
-        WireType::Redstone => {
+    match routing_algo {
+        RoutingAlgo::Lee => {
             // Find size of allowed volume for wires
-            let mut x_min: i32 =  2147483647;
-            let mut x_max: i32 = -2147483647;
-            let mut z_min: i32 =  2147483647;
-            let mut z_max: i32 = -2147483647;
-
-
             let xs = wires.iter().map(|wire| vec![wire.start.x, wire.end.x]).flatten();
-            let x_max = xs.max().unwrap();
+            let x_max = xs.clone().max().unwrap();
             let x_min = xs.min().unwrap();
 
             let zs = wires.iter().map(|wire| vec![wire.start.z, wire.end.z]).flatten();
-            let z_max = zs.max().unwrap();
+            let z_max = zs.clone().max().unwrap();
             let z_min = zs.min().unwrap();
 
 
-            // volume formatted [x][y][z] as per minecraft standard
-            let x_size: usize = (x_max - x_min).try_into().unwrap();
-            let z_size: usize = (z_max - z_min).try_into().unwrap();
-            let y_size: usize = (if x_size < z_size { z_size * 2 } else { x_size * 2 }).try_into().unwrap();
-
-            let mut wire_volume: Vec<Vec<Vec<i32>>> = vec![vec![vec![0; x_size]; y_size]; z_size];
-
+            // Access to map containing info about all gate types
             let gate_info = read_gate_info();
+
+            let mut grid = Grid::new(Point { x: x_min, z: z_min, y: 0 }, Point { x: x_max, z: z_max, y: 10 });
 
             for gate in gates {
                 let info = gate_info.get(&gate.name).unwrap();
 
-                for i in 0..info.x_dim {
-                    if gate.x + i as usize < wire_volume.capacity() {
-                        wire_volume
-                            [(gate.x + i) as usize]
-                            [gate.y as usize]
-                            [gate.z as usize]
-                        = -1;
-                    }
-                }
-                for i in 0..info.z_dim {
-                    if gate.z + i < wire_volume[0][0].capacity() {
-                        wire_volume
-                            [gate.x as usize]
-                            [gate.y as usize]
-                            [(gate.z + i) as usize]
-                        = -1;
-                    }
-                }
                 for i in 0..info.y_dim {
-                    if gate.y + i < wire_volume[0].capacity() {
-                        wire_volume
-                            [gate.x as usize]
-                            [(gate.y + i) as usize]
-                            [gate.z as usize]
-                        = -1;
-                    }
+                    if (gate.y - grid.min.y + i) as usize > grid.y_size { break; }
+                    for j in 0..info.z_dim {
+                        if (gate.z - grid.min.z + j) as usize > grid.z_size { break; }
+                        for k in 0..info.z_dim {
+                            if (gate.z - grid.min.z + k) as usize > grid.x_size { break; }
+                            grid.set(Point { x: k, z: j, y: i }, BlockState::Gate);
+                        }
+                    }    
                 }
             }
 
@@ -131,7 +141,7 @@ pub fn write_mcfunction(
             }
             // writeln!(file, "fill ~{} ~ ~{} ~{} ~ ~{} minecraft:redstone_wire", wire.start.x, wire.start.z, wire.end.x, wire.end.x).expect(file_error);
         },
-        WireType::Wireless => {
+        RoutingAlgo::Wireless => {
             for wire in wires {
                 let relative_start_x = wire.start.x - wire.end.x;
                 let relative_start_z = wire.start.z - wire.end.z;
@@ -156,5 +166,3 @@ pub fn write_mcfunction(
 
     println!("Successfully wrote mcfunction to {MCFUNCTION_PATH}");
 }
-=======
->>>>>>> main
