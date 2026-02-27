@@ -269,7 +269,7 @@ fn place_gates(
     return gates;
 }
 
-fn get_wires(
+pub fn get_wires(
     graph: &graph::Graph<Node, String, Directed>,
     gates: &HashMap<NodeIndex, mcfunction::Gate>,
     gate_info: &HashMap<String, mcfunction::GateInfo>

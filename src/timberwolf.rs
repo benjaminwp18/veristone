@@ -33,7 +33,7 @@ pub fn anneal(
         temperature = temperature_multiplier(temperature) * temperature;
         println!("Annealing iteration {k} at temperature {temperature}");
         perturb(&mut candidate_state, &idxs);  // Find a random neighboring state
-        let delta_cost = cost(&candidate_state, gate_info) - cost(&current_state, gate_info);  // delta_cost < 0 -> new state is better
+        let delta_cost = cost(&candidate_state, circuit_graph, gate_info) - cost(&current_state, circuit_graph, gate_info);  // delta_cost < 0 -> new state is better
         if rand::random_range(0f32..=1f32) < accept_prob(delta_cost, temperature) {  // Decide whether to accept the new state
             current_state = candidate_state.clone();
         }
@@ -44,12 +44,19 @@ pub fn anneal(
 
 fn cost(
     state: &HashMap<NodeIndex, mcfunction::Gate>,
+    graph: &graph::Graph<read_blif::Node, String, Directed>,
     gate_info: &HashMap<String, mcfunction::GateInfo>
 ) -> f32 {
     // TODO: Penalize for: overlapping gates, gates outside boundaries, gates too close together, high total interconnect cost
-    let cost = 0f32;
+    let mut cost = 0f32;
 
-
+    // TEIC: Total Estimated Interconnect Cost
+    let wires = read_blif::get_wires(graph, state, gate_info);
+    let mut teic = 0;
+    for wire in wires {
+        teic += (wire.end.x - wire.start.x).abs() + (wire.end.y - wire.start.y).abs() + (wire.end.z - wire.start.z).abs();
+    }
+    cost += teic as f32;
 
     return cost;
 }
