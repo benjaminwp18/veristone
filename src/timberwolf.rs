@@ -19,7 +19,12 @@ const ALPHA_END: f32 = 0.80;
 const COORD_MIN: i32 = 0;
 const COORD_MAX: i32 = 100;
 
-const PADDING: i32 = 2;
+const GATE_PADDING: i32 = 2;
+
+const OVERLAP_COST_WEIGHT: f32 = 2.0;
+const PADDING_COST_WEIGHT: f32 = 1.0;
+const BOUND_COST_WEIGHT: f32 = 1.0;
+const TEI_COST_WEIGHT: f32 = 1.0;
 
 pub fn anneal(
     circuit_graph: &graph::Graph<read_blif::Node, String, Directed>,
@@ -49,16 +54,16 @@ fn cost(
     graph: &graph::Graph<read_blif::Node, String, Directed>,
     gate_info: &HashMap<String, mcfunction::GateInfo>
 ) -> f32 {
-    // TODO: Penalize for: overlapping gates, gates outside boundaries, gates too close together, high total interconnect cost
     let mut cost = 0f32;
 
+    // Overlapping gates & gates too close together (within 2 * GATE_PADDING)
     let mut overlap_cost = 0i32;
     let mut padding_cost = 0i32;
     let ordered_gates: Vec<&mcfunction::Gate> = state.values().collect();
     for i in 0..ordered_gates.len() {
         let gate1 = ordered_gates[i];
         let gate_info_1 = &gate_info[&ordered_gates[i].name];
-        
+
         let gate1_x_end = gate1.x + gate_info_1.x_dim;
         let gate1_z_end = gate1.z + gate_info_1.z_dim;
         for j in i..ordered_gates.len() {
@@ -68,19 +73,23 @@ fn cost(
             let gate2_x_end = gate2.x + gate_info_2.x_dim;
             let gate2_z_end = gate2.z + gate_info_2.z_dim;
 
-            let max_x = max(gate1.x, gate2.x);
-            let min_x_end = min(gate1_x_end, gate2_x_end);
-            let x_overlap = min_x_end - max_x;
-            
-            let max_z = max(gate1.z, gate2.z);
-            let min_z_end = min(gate1_z_end, gate2_z_end);
-            let z_overlap = min_z_end - max_z;
+            let x_start = max(gate1.x, gate2.x);
+            let x_end = min(gate1_x_end, gate2_x_end);
+            let x_overlap = x_end - x_start;
+
+            let z_start = max(gate1.z, gate2.z);
+            let z_end = min(gate1_z_end, gate2_z_end);
+            let z_overlap = z_end - z_start;
 
             overlap_cost += max(x_overlap, 0) * max(z_overlap, 0);
-            padding_cost += max(x_overlap + PADDING * 2, 0) * max(z_overlap + PADDING * 2, 0);
+            padding_cost += max(x_overlap + GATE_PADDING * 2, 0) * max(z_overlap + GATE_PADDING * 2, 0);
         }
     }
 
+    cost += OVERLAP_COST_WEIGHT * overlap_cost as f32;
+    cost += PADDING_COST_WEIGHT * padding_cost as f32;
+
+    // Arbitrary circuit boundaries
     let mut bound_cost = 0i32;
     for gate in state.values() {
         let current_gate_info = gate_info.get(&gate.name).unwrap();
@@ -99,15 +108,15 @@ fn cost(
             bound_cost += z_end - COORD_MAX;
         }
     }
-    cost += bound_cost as f32;
+    cost += BOUND_COST_WEIGHT * bound_cost as f32;
 
-    // TEIC: Total Estimated Interconnect Cost
+    // TEIC: Total Estimated Interconnect Cost (summative wire length)
     let wires = read_blif::get_wires(graph, state, gate_info);
-    let mut teic = 0;
+    let mut tei_cost = 0;
     for wire in wires {
-        teic += (wire.end.x - wire.start.x).abs() + (wire.end.y - wire.start.y).abs() + (wire.end.z - wire.start.z).abs();
+        tei_cost += (wire.end.x - wire.start.x).abs() + (wire.end.y - wire.start.y).abs() + (wire.end.z - wire.start.z).abs();
     }
-    cost += teic as f32;
+    cost += TEI_COST_WEIGHT * tei_cost as f32;
 
     return cost;
 }
