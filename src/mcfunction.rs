@@ -48,6 +48,7 @@ pub enum RoutingAlgo {
 }
 
 pub fn read_gate_info() -> HashMap<String, GateInfo> {
+    // TODO: also generate the .lib from this json to avoid gate name (capitalization) mismatch
     let gate_info_str = fs::read_to_string("res/gate_info.json").expect("Failed to read gate info file");
     return serde_json::from_str(&gate_info_str).expect("Gate info JSON not well formatted");
 }
@@ -64,7 +65,7 @@ pub fn write_mcfunction(
     let file_error: &str = &format!("Failed to write gate to mcfunction file at {MCFUNCTION_PATH}");
 
     for gate in gates {
-        writeln!(file, "place template logic:{}_gate ~{} ~ ~{}", gate.name, gate.x, gate.z).expect(file_error);
+        writeln!(file, "place template logic:{}_gate ~{} ~ ~{}", gate.name.to_lowercase(), gate.x, gate.z).expect(file_error);
     }
 
     for wire in wires {

@@ -245,8 +245,7 @@ fn place_gates(
                         gates.insert(
                             node_idx,
                             mcfunction::Gate {
-                                // TODO: standardize capitalization of gate names/generate lib from json
-                                name: node_weight.name.to_lowercase(),
+                                name: node_weight.name.clone(),
                                 z: col_idx * cell_size + CELL_PADDING,
                                 x: row_idx * cell_size + CELL_PADDING
                             }

@@ -2,8 +2,7 @@ use petgraph::{graph::{self, NodeIndex}, Directed};
 use std::{cmp::max, collections::HashMap, cmp::min};
 use rand::{Rng, seq::IndexedRandom};
 
-use crate::{mcfunction::{Gate, GateInfo}, read_blif};
-use crate::mcfunction;
+use crate::{mcfunction, read_blif};
 
 const K_MAX: i32 = 200;
 
@@ -35,6 +34,8 @@ pub fn anneal(
     let idxs: Vec<NodeIndex> = current_state.keys().map(|k| *k).collect();
     let mut temperature = TEMP_MAX;
 
+    println!("=== TIMBERWOLF ===");
+
     for k in 0..K_MAX {
         // let temperature = get_temperature(1 - (k + 1) / K_MAX);  // Temperature tends to 0 across annealing
         temperature = temperature_multiplier(temperature) * temperature;
@@ -62,13 +63,13 @@ fn cost(
     let ordered_gates: Vec<&mcfunction::Gate> = state.values().collect();
     for i in 0..ordered_gates.len() {
         let gate1 = ordered_gates[i];
-        let gate_info_1 = &gate_info[&ordered_gates[i].name];
+        let gate_info_1 = gate_info.get(&ordered_gates[i].name).unwrap();
 
         let gate1_x_end = gate1.x + gate_info_1.x_dim;
         let gate1_z_end = gate1.z + gate_info_1.z_dim;
         for j in i..ordered_gates.len() {
             let gate2 = ordered_gates[j];
-            let gate_info_2 = &gate_info[&ordered_gates[j].name];
+            let gate_info_2 = gate_info.get(&ordered_gates[j].name).unwrap();
 
             let gate2_x_end = gate2.x + gate_info_2.x_dim;
             let gate2_z_end = gate2.z + gate_info_2.z_dim;
