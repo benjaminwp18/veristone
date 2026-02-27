@@ -1,8 +1,8 @@
 use petgraph::{graph::{self, NodeIndex}, Directed};
-use std::{collections::HashMap};
+use std::{cmp::max, collections::HashMap, cmp::min};
 use rand::{Rng, seq::IndexedRandom};
 
-use crate::read_blif;
+use crate::{mcfunction::{Gate, GateInfo}, read_blif};
 use crate::mcfunction;
 
 const K_MAX: i32 = 200;
@@ -18,6 +18,8 @@ const ALPHA_END: f32 = 0.80;
 
 const COORD_MIN: i32 = 0;
 const COORD_MAX: i32 = 100;
+
+const PADDING: i32 = 2;
 
 pub fn anneal(
     circuit_graph: &graph::Graph<read_blif::Node, String, Directed>,
@@ -49,6 +51,55 @@ fn cost(
 ) -> f32 {
     // TODO: Penalize for: overlapping gates, gates outside boundaries, gates too close together, high total interconnect cost
     let mut cost = 0f32;
+
+    let mut overlap_cost = 0i32;
+    let mut padding_cost = 0i32;
+    let ordered_gates: Vec<&mcfunction::Gate> = state.values().collect();
+    for i in 0..ordered_gates.len() {
+        let gate1 = ordered_gates[i];
+        let gate_info_1 = &gate_info[&ordered_gates[i].name];
+        
+        let gate1_x_end = gate1.x + gate_info_1.x_dim;
+        let gate1_z_end = gate1.z + gate_info_1.z_dim;
+        for j in i..ordered_gates.len() {
+            let gate2 = ordered_gates[j];
+            let gate_info_2 = &gate_info[&ordered_gates[j].name];
+
+            let gate2_x_end = gate2.x + gate_info_2.x_dim;
+            let gate2_z_end = gate2.z + gate_info_2.z_dim;
+
+            let max_x = max(gate1.x, gate2.x);
+            let min_x_end = min(gate1_x_end, gate2_x_end);
+            let x_overlap = min_x_end - max_x;
+            
+            let max_z = max(gate1.z, gate2.z);
+            let min_z_end = min(gate1_z_end, gate2_z_end);
+            let z_overlap = min_z_end - max_z;
+
+            overlap_cost += max(x_overlap, 0) * max(z_overlap, 0);
+            padding_cost += max(x_overlap + PADDING * 2, 0) * max(z_overlap + PADDING * 2, 0);
+        }
+    }
+
+    let mut bound_cost = 0i32;
+    for gate in state.values() {
+        let current_gate_info = gate_info.get(&gate.name).unwrap();
+        let x_end = gate.x + current_gate_info.x_dim;
+        let z_end = gate.z + current_gate_info.z_dim;
+        if gate.x < COORD_MIN {
+            bound_cost += COORD_MIN - gate.x;
+        }
+        if x_end > COORD_MAX {
+            bound_cost += x_end - COORD_MAX;
+        }
+        if gate.z < COORD_MIN {
+            bound_cost += COORD_MIN - gate.z;
+        }
+        if z_end > COORD_MAX {
+            bound_cost += z_end - COORD_MAX;
+        }
+    }
+    cost += bound_cost as f32;
 
     // TEIC: Total Estimated Interconnect Cost
     let wires = read_blif::get_wires(graph, state, gate_info);
