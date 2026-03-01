@@ -261,7 +261,7 @@ fn place_gates(
             }
         },
         PlacementAlgo::TimberWolf => {
-            gates = timberwolf::anneal(graph, gate_info, timberwolf::LoggingRules::ALWAYS | timberwolf::LoggingRules::TO_FILE);
+            gates = timberwolf::anneal(graph, gate_info, timberwolf::LoggingRules::ALWAYS | timberwolf::LoggingRules::TO_FILE | timberwolf::LoggingRules::TO_GRAPH);
         }
     }
 
@@ -296,7 +296,7 @@ pub fn get_wires(
                 }
                 if start.is_none() {
                     start = Some(mcfunction::LabeledPoint {
-                        x: -2,
+                        x: -4,
                         z: input_idx * 2,
                         y: 0,
                         label: Some(node_weight.name.clone())
@@ -318,7 +318,7 @@ pub fn get_wires(
                 }
                 if ends.len() == 0 {
                     ends.push(mcfunction::LabeledPoint {
-                        x: -4,
+                        x: -6,
                         z: output_idx * 2,
                         y: 0,
                         label: Some(node_weight.name.clone())

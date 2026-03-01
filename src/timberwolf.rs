@@ -1,11 +1,13 @@
 use petgraph::{graph::{self, NodeIndex}, Directed};
 use std::{cmp::{max, min}, collections::HashMap, fs::File, io::Write, path::Path};
 use rand::{Rng, seq::IndexedRandom};
+use plotters::{drawing::IntoDrawingArea, prelude, style::{IntoFont, Palette, Palette99, ShapeStyle}};
 
 use crate::{mcfunction, read_blif};
 
 // Schedule from page 434 of the Timberwolf paper: https://cs.baylor.edu/~maurer/CSI5346/timberwolf.pdf
 const TEMPERATURE_START: f32 = 4000000.0;
+const TEMPERATURE_END: f32 = 0.1;
 const SCHEDULE_TEMPS: [f32; 10] = [40000.0, 20000.0, 10000.0, 5000.0, 200.0, 100.0, 50.0, 5.0, 1.5, 0.0];
 const SCHEDULE_ALPHAS: [f32; 10] = [0.8, 0.84, 0.88, 0.91, 0.94, 0.9, 0.85, 0.8, 0.7, 0.1];
 
@@ -19,18 +21,42 @@ const PERTUB_ATTEMPTS_PER_GATE: i32 = 50;
 
 const OVERLAP_COST_WEIGHT: f32 = 2.0;
 const PADDING_COST_WEIGHT: f32 = 1.0;
-const BOUND_COST_WEIGHT: f32 = 2.0;
+const BOUND_COST_WEIGHT: f32 = 4.0;  // Should be higher than overlap in case gate A will run into gate B as it moves back into bounds
 const TEI_COST_WEIGHT: f32 = 1.5;
 
 const LOG_PATH: &'static str = "res/logs/timberwolf.log";
+const GRAPH_PATH: &'static str = "res/graphs/timberwolf.svg";
 
 #[allow(non_snake_case)]
 pub mod LoggingRules {
     pub const TO_FILE: u8 = 0x01;
     pub const TO_STDOUT: u8 = 0x02;
-    pub const ON_ACCEPT: u8 = 0x04;
-    pub const ON_REJECT: u8 = 0x08;
-    pub const ALWAYS: u8 = 0x0C;
+    pub const TO_GRAPH: u8 = 0x04;
+    pub const ON_ACCEPT: u8 = 0x08;
+    pub const ON_REJECT: u8 = 0x10;
+    pub const ALWAYS: u8 = 0x18;
+}
+
+enum Perturbation<'a> {
+    Move { idx: &'a NodeIndex, end: mcfunction::Point },
+    Swap { idx1: &'a NodeIndex, idx2: &'a NodeIndex, end1: mcfunction::Point, end2: mcfunction::Point }
+}
+
+impl <'a> Perturbation<'a> {
+    fn to_string(&self, idx_to_int: &HashMap<&NodeIndex, u32>) -> String {
+        match self {
+            Perturbation::Move { idx, end } => {
+                return format!("Move {} -> {end}", idx_to_int.get(*idx).unwrap());
+            },
+            Perturbation::Swap { idx1, idx2, end1, end2 } => {
+                return format!(
+                    "Swap {} -> {end1} & {} -> {end2}",
+                    idx_to_int.get(*idx1).unwrap(),
+                    idx_to_int.get(*idx2).unwrap()
+                );
+            }
+        }
+    }
 }
 
 pub fn anneal(
@@ -41,18 +67,27 @@ pub fn anneal(
     let mut current_state = gen_random_state(circuit_graph);
     let mut candidate_state = current_state.clone();
     let idxs: Vec<NodeIndex> = current_state.keys().map(|k| *k).collect();
+    let idx_to_int: HashMap<&NodeIndex, u32> = idxs.iter().zip(0..).collect();
     let mut temperature = TEMPERATURE_START;
 
     let path: &Path = Path::new(LOG_PATH);
     let mut log_file = File::create(path).unwrap();
     let file_error: &str = &format!("Failed to write entry to Timberwolf log file at {LOG_PATH}");
 
+    // Plot series data
+    let mut series_vec: Vec<Vec<(i32, i32)>> = vec![];
+    let mut series_labels: Vec<&NodeIndex> = vec![];
+    let mut series_map: HashMap<&NodeIndex, Vec<(i32, i32)>> = HashMap::new();
+    for idx in &idxs {
+        series_map.insert(&idx, vec![]);
+    }
+
     println!("=== TIMBERWOLF ===");
 
-    while temperature >= 0.1 {
+    while temperature >= TEMPERATURE_END {
         for _ in 0..PERTUB_ATTEMPTS_PER_GATE {
             // Find a random neighboring state
-            perturb(&mut candidate_state, &idxs);
+            let perturbation = perturb(&mut candidate_state, &idxs);
 
             // delta_cost < 0 -> new state is better
             let current_cost = cost(&current_state, circuit_graph, gate_info);
@@ -63,16 +98,117 @@ pub fn anneal(
             let prob = accept_prob(delta_cost, temperature);
             let accepted = rand::random_range(0f32..=1f32) < prob;
             if accepted {
+                // Record perturbations for later plotting
+                match &perturbation {
+                    Perturbation::Move { idx, end } => {
+                        series_map.get_mut(idx).unwrap().push((end.x, end.z));
+                    },
+                    Perturbation::Swap { idx1, idx2, end1, end2 } => {
+                        series_vec.push(series_map.remove(idx1).unwrap());
+                        series_labels.push(idx1);
+                        series_map.insert(idx1, vec![(end1.x, end1.z)]);
+
+                        series_vec.push(series_map.remove(idx2).unwrap());
+                        series_labels.push(idx2);
+                        series_map.insert(idx2, vec![(end2.x, end2.z)]);
+                    }
+                }
                 current_state = candidate_state.clone();
             }
+            else {
+                candidate_state = current_state.clone();
+            }
 
+            // Add a text log entry
             if (accepted && logging_rules & LoggingRules::ON_ACCEPT > 0) || logging_rules & LoggingRules::ON_REJECT > 0 {
-                log_anneal_step(temperature, current_cost, delta_cost, candidate_cost, prob, accepted, logging_rules, &mut log_file, &file_error);
+                let temperature_s = temperature.to_string();
+                let current_cost_s = current_cost.to_string();
+                let delta_cost_s = delta_cost.to_string();
+                let candidate_cost_s = candidate_cost.to_string();
+                let probability_s = prob.to_string();
+
+                let entry = format!(
+                    "Annealed at T={:9} @ Δcost = {:7} = {:7} - {:7} w/accept prob={:3} ({}) and perturb {}",
+                    &temperature_s[..9.min(temperature_s.len())],
+                    &delta_cost_s[..7.min(delta_cost_s.len())],
+                    &current_cost_s[..7.min(current_cost_s.len())],
+                    &candidate_cost_s[..7.min(candidate_cost_s.len())],
+                    &probability_s[..3.min(probability_s.len())],
+                    if accepted { "ACCEPTED" } else { "DENIED" },
+                    perturbation.to_string(&idx_to_int)
+                );
+
+                if logging_rules & LoggingRules::TO_STDOUT > 0 {
+                    println!("{entry}");
+                }
+                if logging_rules & LoggingRules::TO_FILE > 0 {
+                    writeln!(log_file, "{entry}").expect(file_error);
+                }
             }
         }
 
         // Temperature tends to 0 across annealing
         temperature = temperature_multiplier(temperature) * temperature;
+    }
+
+    if logging_rules & LoggingRules::TO_GRAPH > 0 {
+        // Move the last series to the vectors
+        for idx in &idxs {
+            series_labels.push(idx);
+            series_vec.push(series_map.remove(idx).unwrap());
+        }
+
+        let flattened = series_vec.iter().flatten();
+        let mins = flattened.clone().map(|pair| *pair).reduce(|acc, pair| {
+            (
+                if pair.0 < acc.0 {pair.0} else {acc.0},
+                if pair.1 < acc.1 {pair.1} else {acc.1},
+            )
+        }).unwrap();
+        let maxs = flattened.map(|pair| *pair).reduce(|acc, pair| {
+            (
+                if pair.0 > acc.0 {pair.0} else {acc.0},
+                if pair.1 > acc.1 {pair.1} else {acc.1},
+            )
+        }).unwrap();
+
+        let chart_root = prelude::SVGBackend::new(GRAPH_PATH, (640, 480)).into_drawing_area();
+        chart_root.fill(&prelude::WHITE).unwrap();
+
+        let mut chart = prelude::ChartBuilder::on(&chart_root)
+            .caption("z vs x", ("sans-serif", 40).into_font())
+            .margin(5)
+            .x_label_area_size(30)
+            .y_label_area_size(30)
+            .build_cartesian_2d(mins.0..maxs.0, mins.1..maxs.1).unwrap();
+        chart.configure_mesh().draw().unwrap();
+
+        let colors: HashMap<&NodeIndex, prelude::PaletteColor<Palette99>> = idxs.iter().zip((0..idxs.len()).map(Palette99::pick)).collect();
+        // let count = series_labels.iter().filter(|&&idx| idx == &idxs[0]).count();
+        // let opacity_mix: Vec<f64> = (0..count).rev().map(|i| i as f64 / count as f64).collect();
+
+        // let mut i = 0;
+        for (&idx, series) in series_labels.iter().zip(series_vec.iter()) {
+            // if idx != &idxs[0] {
+            //     continue;
+            // }
+            let style: ShapeStyle = colors.get(idx).unwrap().into();
+            chart
+                .draw_series(prelude::LineSeries::new(
+                    series.clone(),
+                    style
+                )).unwrap()
+                .label(idx_to_int.get(idx).unwrap().to_string())
+                .legend(move |(x, y)| prelude::PathElement::new(vec![(x, y), (x + 20, y)], style.clone()));
+            // i += 1;
+        }
+
+        chart
+            .configure_series_labels()
+            .background_style(prelude::WHITE)
+            .draw().unwrap();
+
+        chart_root.present().unwrap();
     }
 
     return current_state;
@@ -150,7 +286,7 @@ fn cost(
     return cost;
 }
 
-fn perturb(state: &mut HashMap<NodeIndex, mcfunction::Gate>, idxs: &Vec<NodeIndex>) {
+fn perturb<'a>(state: &mut HashMap<NodeIndex, mcfunction::Gate>, idxs: &'a Vec<NodeIndex>) -> Perturbation<'a> {
     match rand::rng().random_range(0..=MOVES_PER_SWAP) {
         0 => {
             // Swap
@@ -160,6 +296,19 @@ fn perturb(state: &mut HashMap<NodeIndex, mcfunction::Gate>, idxs: &Vec<NodeInde
 
             (gate1.x, gate2.x) = (gate2.x, gate1.x);
             (gate1.z, gate2.z) = (gate2.z, gate1.z);
+
+            return Perturbation::Swap {
+                idx1,
+                idx2,
+                end1: mcfunction::Point {
+                    x: state.get(idx1).unwrap().x,
+                    z: state.get(idx1).unwrap().z
+                },
+                end2: mcfunction::Point {
+                    x: state.get(idx2).unwrap().x,
+                    z: state.get(idx2).unwrap().z
+                }
+            };
         },
         _ => {
             // Move
@@ -167,6 +316,14 @@ fn perturb(state: &mut HashMap<NodeIndex, mcfunction::Gate>, idxs: &Vec<NodeInde
             let gate = state.get_mut(random_idx).unwrap();
             gate.x += rand::rng().random_range(-5..=5);
             gate.z += rand::rng().random_range(-5..=5);
+
+            return Perturbation::Move {
+                idx: random_idx,
+                end: mcfunction::Point {
+                    x: state.get(random_idx).unwrap().x,
+                    z: state.get(random_idx).unwrap().z
+                }
+            };
         }
         // TODO: rotate/flip gates?
     }
@@ -207,39 +364,4 @@ fn gen_random_state(circuit_graph: &graph::Graph<read_blif::Node, String, Direct
     }
 
     return gates;
-}
-
-fn log_anneal_step(
-    temperature: f32,
-    current_cost: f32,
-    delta_cost: f32,
-    candidate_cost: f32,
-    probability: f32,
-    accepted: bool,
-    logging_rules: u8,
-    log_file: &mut File,
-    file_error: &str
-) {
-    let temperature_s = temperature.to_string();
-    let current_cost_s = current_cost.to_string();
-    let delta_cost_s = delta_cost.to_string();
-    let candidate_cost_s = candidate_cost.to_string();
-    let probability_s = probability.to_string();
-
-    let entry = format!(
-        "Annealed at T={:9} @ Δcost = {:7} = {:7} - {:7} w/accept prob={:3} ({})",
-        &temperature_s[..9.min(temperature_s.len())],
-        &delta_cost_s[..7.min(delta_cost_s.len())],
-        &current_cost_s[..7.min(current_cost_s.len())],
-        &candidate_cost_s[..7.min(candidate_cost_s.len())],
-        &probability_s[..3.min(probability_s.len())],
-        if accepted { "ACCEPTED" } else { "DENIED" }
-    );
-
-    if logging_rules & LoggingRules::TO_STDOUT > 0 {
-        println!("{entry}");
-    }
-    if logging_rules & LoggingRules::TO_FILE > 0 {
-        writeln!(log_file, "{entry}").expect(file_error);
-    }
 }
