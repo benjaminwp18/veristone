@@ -1,5 +1,5 @@
 use petgraph::{graph::{self, NodeIndex}, Directed};
-use std::{cmp::max, collections::HashMap, cmp::min};
+use std::{cmp::{max, min}, collections::HashMap, fs::File, io::Write, path::Path};
 use rand::{Rng, seq::IndexedRandom};
 
 use crate::{mcfunction, read_blif};
@@ -22,14 +22,30 @@ const PADDING_COST_WEIGHT: f32 = 1.0;
 const BOUND_COST_WEIGHT: f32 = 2.0;
 const TEI_COST_WEIGHT: f32 = 1.5;
 
+const LOG_PATH: &'static str = "res/logs/timberwolf.log";
+
+#[allow(non_snake_case)]
+pub mod LoggingRules {
+    pub const TO_FILE: u8 = 0x01;
+    pub const TO_STDOUT: u8 = 0x02;
+    pub const ON_ACCEPT: u8 = 0x04;
+    pub const ON_REJECT: u8 = 0x08;
+    pub const ALWAYS: u8 = 0x0C;
+}
+
 pub fn anneal(
     circuit_graph: &graph::Graph<read_blif::Node, String, Directed>,
-    gate_info: &HashMap<String, mcfunction::GateInfo>
+    gate_info: &HashMap<String, mcfunction::GateInfo>,
+    logging_rules: u8
 ) -> HashMap<NodeIndex, mcfunction::Gate> {
     let mut current_state = gen_random_state(circuit_graph);
     let mut candidate_state = current_state.clone();
     let idxs: Vec<NodeIndex> = current_state.keys().map(|k| *k).collect();
     let mut temperature = TEMPERATURE_START;
+
+    let path: &Path = Path::new(LOG_PATH);
+    let mut log_file = File::create(path).unwrap();
+    let file_error: &str = &format!("Failed to write entry to Timberwolf log file at {LOG_PATH}");
 
     println!("=== TIMBERWOLF ===");
 
@@ -46,9 +62,14 @@ pub fn anneal(
             // Decide whether to accept the new state
             let prob = accept_prob(delta_cost, temperature);
             if rand::random_range(0f32..=1f32) < prob {
-                // println!("Annealed at T={temperature:.32} \t & accepted {current_cost} -> \t {} \t ({delta_cost}, {prob})", delta_cost + current_cost);
-                log_anneal_step(temperature, current_cost, delta_cost, candidate_cost, prob);
+                if logging_rules & LoggingRules::ON_ACCEPT > 0 {
+                    log_anneal_step(temperature, current_cost, delta_cost, candidate_cost, prob, logging_rules, &mut log_file, &file_error);
+                }
+
                 current_state = candidate_state.clone();
+            }
+            else if logging_rules & LoggingRules::ON_REJECT > 0 {
+                log_anneal_step(temperature, current_cost, delta_cost, candidate_cost, prob, logging_rules, &mut log_file, &file_error);
             }
         }
 
@@ -190,13 +211,23 @@ fn gen_random_state(circuit_graph: &graph::Graph<read_blif::Node, String, Direct
     return gates;
 }
 
-fn log_anneal_step(temperature: f32, current_cost: f32, delta_cost: f32, candidate_cost: f32, probability: f32) {
+fn log_anneal_step(
+    temperature: f32,
+    current_cost: f32,
+    delta_cost: f32,
+    candidate_cost: f32,
+    probability: f32,
+    logging_rules: u8,
+    log_file: &mut File,
+    file_error: &str
+) {
     let temperature_s = temperature.to_string();
     let current_cost_s = current_cost.to_string();
     let delta_cost_s = delta_cost.to_string();
     let candidate_cost_s = candidate_cost.to_string();
     let probability_s = probability.to_string();
-    println!(
+
+    let entry = format!(
         "Annealed at T={:9} @ Δcost = {:7} = {:7} - {:7} w/accept prob={:3})",
         &temperature_s[..9.min(temperature_s.len())],
         &delta_cost_s[..7.min(delta_cost_s.len())],
@@ -204,4 +235,11 @@ fn log_anneal_step(temperature: f32, current_cost: f32, delta_cost: f32, candida
         &candidate_cost_s[..7.min(candidate_cost_s.len())],
         &probability_s[..3.min(probability_s.len())]
     );
+
+    if logging_rules & LoggingRules::TO_STDOUT > 0 {
+        println!("{entry}");
+    }
+    if logging_rules & LoggingRules::TO_FILE > 0 {
+        writeln!(log_file, "{entry}").expect(file_error);
+    }
 }
