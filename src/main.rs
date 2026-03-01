@@ -19,5 +19,10 @@ fn main() {
     let blif_path = blif_buf.as_path();
     make_blif::generate_blif(verilog_path, Path::new("res/mc.lib"), blif_path, false);
     let (gates, wires) = read_blif::read_blif(blif_path, read_blif::PlacementAlgo::TimberWolf);
-    mcfunction::write_mcfunction(&gates, &wires, mcfunction::RoutingAlgo::Wireless);
+    mcfunction::write_mcfunction(
+        &gates,
+        &wires,
+        mcfunction::GateRules::TEMPLATE,
+        mcfunction::RoutingAlgo::Wireless
+    );
 }

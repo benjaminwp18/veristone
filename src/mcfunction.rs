@@ -44,7 +44,15 @@ pub struct GateInfo {
 }
 
 pub enum RoutingAlgo {
-    Wireless
+    Wireless,
+    None
+}
+
+#[allow(non_snake_case)]
+pub mod GateRules {
+    pub const TEMPLATE: u8 = 0x01;
+    pub const RECTANGLE: u8 = 0x02;
+    pub const MARKED: u8 = 0x04;
 }
 
 pub fn read_gate_info() -> HashMap<String, GateInfo> {
@@ -53,19 +61,35 @@ pub fn read_gate_info() -> HashMap<String, GateInfo> {
     return serde_json::from_str(&gate_info_str).expect("Gate info JSON not well formatted");
 }
 
+/// Perform net routing according to `routing_algo`,
+/// then convert the routed circuit to an mcfunction file.
+/// `gate_placement_rules` is a bitwise union of `GateRules` that determines how
+/// gates are rendered. Use `GateRules.TEMPLATE` to create actual gates.
 pub fn write_mcfunction(
     gates: &Vec<Gate>,
     wires: &Vec<Wire>,
-    routing_algo: RoutingAlgo
+    gate_placement_rules: u8,
+    routing_algo: RoutingAlgo,
 ) {
     println!("\n\n=== MCFUNCTION ===\n");
 
+    // TODO: consolidate read_gate_info so it's only called once?
+    let gate_info = read_gate_info();
     let path: &Path = Path::new(MCFUNCTION_PATH);
     let mut file = File::create(path).unwrap();
     let file_error: &str = &format!("Failed to write gate to mcfunction file at {MCFUNCTION_PATH}");
 
     for gate in gates {
-        writeln!(file, "place template logic:{}_gate ~{} ~ ~{}", gate.name.to_lowercase(), gate.x, gate.z).expect(file_error);
+        if gate_placement_rules & GateRules::RECTANGLE > 0 {
+            let info = gate_info.get(&gate.name).unwrap();
+            writeln!(file, "fill ~{} ~-1 ~{} ~{} ~-1 ~{} minecraft:white_wool", gate.x, gate.z, gate.x + info.x_dim, gate.z + info.z_dim).expect(file_error);
+        }
+        if gate_placement_rules & GateRules::TEMPLATE > 0 {
+            writeln!(file, "place template logic:{}_gate ~{} ~ ~{}", gate.name.to_lowercase(), gate.x, gate.z).expect(file_error);
+        }
+        if gate_placement_rules & GateRules::MARKED > 0 {
+            writeln!(file, "summon minecraft:armor_stand ~{} ~ ~{} {{Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: \"{}\"}}", gate.x, gate.z, gate.name).expect(file_error);
+        }
     }
 
     for wire in wires {
@@ -88,7 +112,8 @@ pub fn write_mcfunction(
                 if wire.end.label.is_some() {
                     writeln!(file, "summon minecraft:armor_stand ~{} ~{} ~{} {{Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: \"{}\"}}", (wire.end.x as f32) + 0.5, wire.end.y + 1, (wire.end.z as f32) + 0.5, wire.end.label.as_ref().unwrap()).expect(file_error);
                 }
-            }
+            },
+            RoutingAlgo::None => {}
         }
     }
 
