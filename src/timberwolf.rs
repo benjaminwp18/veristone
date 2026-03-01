@@ -4,26 +4,23 @@ use rand::{Rng, seq::IndexedRandom};
 
 use crate::{mcfunction, read_blif};
 
-const K_MAX: i32 = 200;
-
-const TEMP_MAX: f32 = 10000000.0;
-const TEMP_MID1: f32 = 100000.0;
-const TEMP_MID2: f32 = 100.0;
-const TEMP_MIN: f32 = 0.001;
-
-const ALPHA_START: f32 = 0.80;
-const ALPHA_MID: f32 = 0.95;
-const ALPHA_END: f32 = 0.80;
+// Schedule from page 434 of the Timberwolf paper: https://cs.baylor.edu/~maurer/CSI5346/timberwolf.pdf
+const TEMPERATURE_START: f32 = 4000000.0;
+const SCHEDULE_TEMPS: [f32; 10] = [40000.0, 20000.0, 10000.0, 5000.0, 200.0, 100.0, 50.0, 5.0, 1.5, 0.0];
+const SCHEDULE_ALPHAS: [f32; 10] = [0.8, 0.84, 0.88, 0.91, 0.94, 0.9, 0.85, 0.8, 0.7, 0.1];
 
 const COORD_MIN: i32 = 0;
-const COORD_MAX: i32 = 100;
+const COORD_MAX: i32 = 50;
 
 const GATE_PADDING: i32 = 2;
 
+const MOVES_PER_SWAP: i32 = 3;
+const PERTUB_ATTEMPTS_PER_GATE: i32 = 50;
+
 const OVERLAP_COST_WEIGHT: f32 = 2.0;
 const PADDING_COST_WEIGHT: f32 = 1.0;
-const BOUND_COST_WEIGHT: f32 = 1.0;
-const TEI_COST_WEIGHT: f32 = 1.0;
+const BOUND_COST_WEIGHT: f32 = 2.0;
+const TEI_COST_WEIGHT: f32 = 1.5;
 
 pub fn anneal(
     circuit_graph: &graph::Graph<read_blif::Node, String, Directed>,
@@ -32,19 +29,31 @@ pub fn anneal(
     let mut current_state = gen_random_state(circuit_graph);
     let mut candidate_state = current_state.clone();
     let idxs: Vec<NodeIndex> = current_state.keys().map(|k| *k).collect();
-    let mut temperature = TEMP_MAX;
+    let mut temperature = TEMPERATURE_START;
 
     println!("=== TIMBERWOLF ===");
 
-    for k in 0..K_MAX {
-        // let temperature = get_temperature(1 - (k + 1) / K_MAX);  // Temperature tends to 0 across annealing
-        temperature = temperature_multiplier(temperature) * temperature;
-        println!("Annealing iteration {k} at temperature {temperature}");
-        perturb(&mut candidate_state, &idxs);  // Find a random neighboring state
-        let delta_cost = cost(&candidate_state, circuit_graph, gate_info) - cost(&current_state, circuit_graph, gate_info);  // delta_cost < 0 -> new state is better
-        if rand::random_range(0f32..=1f32) < accept_prob(delta_cost, temperature) {  // Decide whether to accept the new state
-            current_state = candidate_state.clone();
+    while temperature >= 0.1 {
+        for _ in 0..PERTUB_ATTEMPTS_PER_GATE {
+            // Find a random neighboring state
+            perturb(&mut candidate_state, &idxs);
+
+            // delta_cost < 0 -> new state is better
+            let current_cost = cost(&current_state, circuit_graph, gate_info);
+            let candidate_cost = cost(&candidate_state, circuit_graph, gate_info);
+            let delta_cost = candidate_cost - current_cost;
+
+            // Decide whether to accept the new state
+            let prob = accept_prob(delta_cost, temperature);
+            if rand::random_range(0f32..=1f32) < prob {
+                // println!("Annealed at T={temperature:.32} \t & accepted {current_cost} -> \t {} \t ({delta_cost}, {prob})", delta_cost + current_cost);
+                log_anneal_step(temperature, current_cost, delta_cost, candidate_cost, prob);
+                current_state = candidate_state.clone();
+            }
         }
+
+        // Temperature tends to 0 across annealing
+        temperature = temperature_multiplier(temperature) * temperature;
     }
 
     return current_state;
@@ -123,15 +132,8 @@ fn cost(
 }
 
 fn perturb(state: &mut HashMap<NodeIndex, mcfunction::Gate>, idxs: &Vec<NodeIndex>) {
-    match rand::rng().random_range(0..=1) {
+    match rand::rng().random_range(0..=MOVES_PER_SWAP) {
         0 => {
-            // Move
-            let random_idx = idxs.choose(&mut rand::rng()).unwrap();
-            let gate = state.get_mut(random_idx).unwrap();
-            gate.x += rand::rng().random_range(-3..=3);
-            gate.z += rand::rng().random_range(-3..=3);
-        },
-        _ => {
             // Swap
             let mut idx_iterator = idxs.choose_multiple(&mut rand::rng(), 2);
             let (idx1, idx2) = (idx_iterator.next().unwrap(), idx_iterator.next().unwrap());
@@ -139,23 +141,26 @@ fn perturb(state: &mut HashMap<NodeIndex, mcfunction::Gate>, idxs: &Vec<NodeInde
 
             (gate1.x, gate2.x) = (gate2.x, gate1.x);
             (gate1.z, gate2.z) = (gate2.z, gate1.z);
+        },
+        _ => {
+            // Move
+            let random_idx = idxs.choose(&mut rand::rng()).unwrap();
+            let gate = state.get_mut(random_idx).unwrap();
+            gate.x += rand::rng().random_range(-5..=5);
+            gate.z += rand::rng().random_range(-5..=5);
         }
         // TODO: rotate/flip gates?
     }
 }
 
 fn temperature_multiplier(current_temperature: f32) -> f32 {
-    // Super basic piecewise multiplier
-    // See temperature graph? https://miro.medium.com/v2/resize:fit:720/format:webp/1*FqxMgk1-JHuwIOGGQ8U8sg.jpeg
-    if current_temperature > TEMP_MID1 {
-        return ALPHA_START;
+    for i in 0..SCHEDULE_TEMPS.len() {
+        if current_temperature >= SCHEDULE_TEMPS[i] {
+            return SCHEDULE_ALPHAS[i];
+        }
     }
-    else if TEMP_MID1 >= current_temperature && current_temperature > TEMP_MID2 {
-        return ALPHA_MID;
-    }
-    else {
-        return ALPHA_END;
-    }
+
+    return SCHEDULE_ALPHAS[SCHEDULE_ALPHAS.len() - 1];
 }
 
 fn accept_prob(delta_cost: f32, temperature: f32) -> f32 {
@@ -173,8 +178,9 @@ fn gen_random_state(circuit_graph: &graph::Graph<read_blif::Node, String, Direct
             read_blif::NodeType::Gate => {
                 gates.insert(node_idx, mcfunction::Gate {
                     name: node_weight.name.clone(),
-                    x: rand::rng().random_range(COORD_MIN..=COORD_MAX),
-                    z: rand::rng().random_range(COORD_MIN..=COORD_MAX),
+                    // Start in closest 3rd of the available area
+                    x: rand::rng().random_range(COORD_MIN..=COORD_MAX / 3),
+                    z: rand::rng().random_range(COORD_MIN..=COORD_MAX / 3),
                 });
             },
             _ => ()  // Placement states only include gates
@@ -182,4 +188,20 @@ fn gen_random_state(circuit_graph: &graph::Graph<read_blif::Node, String, Direct
     }
 
     return gates;
+}
+
+fn log_anneal_step(temperature: f32, current_cost: f32, delta_cost: f32, candidate_cost: f32, probability: f32) {
+    let temperature_s = temperature.to_string();
+    let current_cost_s = current_cost.to_string();
+    let delta_cost_s = delta_cost.to_string();
+    let candidate_cost_s = candidate_cost.to_string();
+    let probability_s = probability.to_string();
+    println!(
+        "Annealed at T={:9} @ Δcost = {:7} = {:7} - {:7} w/accept prob={:3})",
+        &temperature_s[..9.min(temperature_s.len())],
+        &delta_cost_s[..7.min(delta_cost_s.len())],
+        &current_cost_s[..7.min(current_cost_s.len())],
+        &candidate_cost_s[..7.min(candidate_cost_s.len())],
+        &probability_s[..3.min(probability_s.len())]
+    );
 }
