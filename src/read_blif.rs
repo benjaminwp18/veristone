@@ -261,7 +261,7 @@ fn place_gates(
             }
         },
         PlacementAlgo::TimberWolf => {
-            gates = timberwolf::anneal(graph, gate_info, timberwolf::LoggingRules::ON_ACCEPT | timberwolf::LoggingRules::TO_FILE);
+            gates = timberwolf::anneal(graph, gate_info, timberwolf::LoggingRules::ALWAYS | timberwolf::LoggingRules::TO_FILE);
         }
     }
 

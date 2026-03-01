@@ -61,15 +61,13 @@ pub fn anneal(
 
             // Decide whether to accept the new state
             let prob = accept_prob(delta_cost, temperature);
-            if rand::random_range(0f32..=1f32) < prob {
-                if logging_rules & LoggingRules::ON_ACCEPT > 0 {
-                    log_anneal_step(temperature, current_cost, delta_cost, candidate_cost, prob, logging_rules, &mut log_file, &file_error);
-                }
-
+            let accepted = rand::random_range(0f32..=1f32) < prob;
+            if accepted {
                 current_state = candidate_state.clone();
             }
-            else if logging_rules & LoggingRules::ON_REJECT > 0 {
-                log_anneal_step(temperature, current_cost, delta_cost, candidate_cost, prob, logging_rules, &mut log_file, &file_error);
+
+            if (accepted && logging_rules & LoggingRules::ON_ACCEPT > 0) || logging_rules & LoggingRules::ON_REJECT > 0 {
+                log_anneal_step(temperature, current_cost, delta_cost, candidate_cost, prob, accepted, logging_rules, &mut log_file, &file_error);
             }
         }
 
@@ -217,6 +215,7 @@ fn log_anneal_step(
     delta_cost: f32,
     candidate_cost: f32,
     probability: f32,
+    accepted: bool,
     logging_rules: u8,
     log_file: &mut File,
     file_error: &str
@@ -228,12 +227,13 @@ fn log_anneal_step(
     let probability_s = probability.to_string();
 
     let entry = format!(
-        "Annealed at T={:9} @ Δcost = {:7} = {:7} - {:7} w/accept prob={:3})",
+        "Annealed at T={:9} @ Δcost = {:7} = {:7} - {:7} w/accept prob={:3} ({})",
         &temperature_s[..9.min(temperature_s.len())],
         &delta_cost_s[..7.min(delta_cost_s.len())],
         &current_cost_s[..7.min(current_cost_s.len())],
         &candidate_cost_s[..7.min(candidate_cost_s.len())],
-        &probability_s[..3.min(probability_s.len())]
+        &probability_s[..3.min(probability_s.len())],
+        if accepted { "ACCEPTED" } else { "DENIED" }
     );
 
     if logging_rules & LoggingRules::TO_STDOUT > 0 {
