@@ -54,11 +54,10 @@ pub enum RoutingAlgo {
     None
 }
 
-#[allow(non_snake_case)]
-pub mod GateRules {
-    pub const TEMPLATE: u8 = 0x01;
-    pub const RECTANGLE: u8 = 0x02;
-    pub const MARKED: u8 = 0x04;
+pub enum GateRule {
+    Template,
+    Rectangle,
+    Marked
 }
 
 pub fn read_gate_info() -> HashMap<String, GateInfo> {
@@ -74,7 +73,7 @@ pub fn read_gate_info() -> HashMap<String, GateInfo> {
 pub fn write_mcfunction(
     gates: &Vec<Gate>,
     wires: &Vec<Wire>,
-    gate_placement_rules: u8,
+    gate_placement_rules: &Vec<GateRule>,
     routing_algo: RoutingAlgo,
 ) {
     println!("\n\n=== MCFUNCTION ===\n");
@@ -86,15 +85,19 @@ pub fn write_mcfunction(
     let file_error: &str = &format!("Failed to write gate to mcfunction file at {MCFUNCTION_PATH}");
 
     for gate in gates {
-        if gate_placement_rules & GateRules::RECTANGLE > 0 {
-            let info = gate_info.get(&gate.name).unwrap();
-            writeln!(file, "fill ~{} ~-1 ~{} ~{} ~-1 ~{} minecraft:white_wool", gate.x, gate.z, gate.x + info.x_dim, gate.z + info.z_dim).expect(file_error);
-        }
-        if gate_placement_rules & GateRules::TEMPLATE > 0 {
-            writeln!(file, "place template logic:{}_gate ~{} ~ ~{}", gate.name.to_lowercase(), gate.x, gate.z).expect(file_error);
-        }
-        if gate_placement_rules & GateRules::MARKED > 0 {
-            writeln!(file, "summon minecraft:armor_stand ~{} ~ ~{} {{Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: \"{}\"}}", gate.x, gate.z, gate.name).expect(file_error);
+        for gate_rule in gate_placement_rules {
+            match gate_rule {
+                GateRule::Rectangle => {
+                    let info = gate_info.get(&gate.name).unwrap();
+                    writeln!(file, "fill ~{} ~-1 ~{} ~{} ~-1 ~{} minecraft:white_wool", gate.x, gate.z, gate.x + info.x_dim, gate.z + info.z_dim).expect(file_error);
+                },
+                GateRule::Template => {
+                    writeln!(file, "place template logic:{}_gate ~{} ~ ~{}", gate.name.to_lowercase(), gate.x, gate.z).expect(file_error);
+                },
+                GateRule::Marked => {
+                    writeln!(file, "summon minecraft:armor_stand ~{} ~ ~{} {{Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: \"{}\"}}", gate.x, gate.z, gate.name).expect(file_error);
+                }
+            }
         }
     }
 

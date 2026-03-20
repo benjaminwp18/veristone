@@ -22,7 +22,7 @@ fn main() {
     mcfunction::write_mcfunction(
         &gates,
         &wires,
-        mcfunction::GateRules::TEMPLATE,
+        &vec![mcfunction::GateRule::Template],
         mcfunction::RoutingAlgo::Wireless
     );
 }

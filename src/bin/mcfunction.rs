@@ -45,5 +45,5 @@ fn main() {
         }
     ];
 
-    mcfunction::write_mcfunction(&gates, &wires, mcfunction::GateRules::TEMPLATE, mcfunction::RoutingAlgo::Wireless);
+    mcfunction::write_mcfunction(&gates, &wires, &vec![mcfunction::GateRule::Template], mcfunction::RoutingAlgo::Wireless);
 }
