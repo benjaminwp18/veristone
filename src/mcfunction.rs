@@ -1,5 +1,6 @@
 use std::{io::Write, path::Path};
 use std::fs::File;
+use graphviz_rust::attributes::start;
 use serde_json;
 use std::collections::HashMap;
 use std::fs;
@@ -49,9 +50,10 @@ pub enum RoutingAlgo {
     Lee
 }
 
+#[derive(Clone)]
 struct Grid {
-    min: Point,              // defined as bottom left in the x-z axis
-    max: Point,              // defined as top right in the x-z axis
+    min: Point,     // defined as bottom left in the x-z axis
+    max: Point,     // defined as top right in the x-z axis
     x_size: usize,
     y_size: usize,
     z_size: usize,
@@ -59,7 +61,8 @@ struct Grid {
      * grid values defined as follows:
      *  0 = empty and unchecked
      *  >0 = checked, marked by distance from starting point
-     *  -1 = gate in this location, will be skipped in propogation
+     *  -1 = gate in this location, skipped in propogation
+     *  -2 = wire in this location, skiped in propogation
      */
     grid: Vec<Vec<Vec<i32>>>
 }
@@ -86,7 +89,6 @@ impl Grid {
             [point.y as usize]
             [(point.z - self.min.z) as usize]
         = dist;
-
     }
 }
 
@@ -124,19 +126,19 @@ pub fn write_mcfunction(
             // Access to map containing info about all gate types
             let gate_info = read_gate_info();
 
-            let mut grid = Grid::new(Point { x: x_min, z: z_min, y: 0 }, Point { x: x_max, z: z_max, y: 10 });
+            let mut final_grid = Grid::new(Point { x: x_min, z: z_min, y: 0 }, Point { x: x_max, z: z_max, y: 10 });
 
             for gate in gates {
                 let info = gate_info.get(&gate.name).unwrap();
 
                 // Mark all blocks occupied by gates
                 for i in 0..info.y_dim {
-                    if (gate.y - grid.min.y + i) as usize > grid.y_size { break; }
+                    if (gate.y - final_grid.min.y + i) as usize > final_grid.y_size { break; }
                     for j in 0..info.z_dim {
-                        if (gate.z - grid.min.z + j) as usize > grid.z_size { break; }
+                        if (gate.z - final_grid.min.z + j) as usize > final_grid.z_size { break; }
                         for k in 0..info.z_dim {
-                            if (gate.z - grid.min.z + k) as usize > grid.x_size { break; }
-                            grid.set(Point { x: k, z: j, y: i }, -1);
+                            if (gate.z - final_grid.min.z + k) as usize > final_grid.x_size { break; }
+                            final_grid.set(Point { x: k, z: j, y: i }, -1);
                         }
                     }    
                 }
@@ -144,9 +146,19 @@ pub fn write_mcfunction(
 
 
             for wire in wires {
+                let mut temp_grid: Grid = final_grid.clone();
+
+                let mut blocks_to_check: Vec<&LabeledPoint> = Vec::new();
+                blocks_to_check.push(&wire.start); // push the starting point to start there
                 
+                while blocks_to_check.len() > 0 {
+                    // TODO: check current point
+                    // TODO: check four adjacent points and add to list if not occupied
+                    // TODO: break when the end point is reached
+                }
+
+                //TODO: Work backward from end point back to start, edit final_grid to set final wire positions
             }
-            // writeln!(file, "fill ~{} ~ ~{} ~{} ~ ~{} minecraft:redstone_wire", wire.start.x, wire.start.z, wire.end.x, wire.end.x).expect(file_error);
         },
         RoutingAlgo::Wireless => {
             for wire in wires {
