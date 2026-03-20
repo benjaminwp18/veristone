@@ -23,6 +23,12 @@ pub struct LabeledPoint {
     pub label: Option<String>
 }
 
+impl LabeledPoint {
+    fn compare(&self, point: &LabeledPoint) -> bool {
+        self.x == point.x && self.y == point.y && self.z == point.z
+    }
+}
+
 pub struct Wire {
     pub start: LabeledPoint,
     pub end: LabeledPoint
@@ -83,12 +89,20 @@ impl Grid {
         }
     }
 
-    fn set(&mut self, point: Point, dist: i32) {
-        self.grid
-            [(point.x - self.min.x) as usize]
-            [point.y as usize]
-            [(point.z - self.min.z) as usize]
-        = dist;
+    fn set(&mut self, point: &LabeledPoint, dist: i32) {
+        let x: usize = (point.x - self.min.x) as usize;
+        let z: usize = (point.x - self.min.x) as usize;
+        self.grid[x][point.y as usize][z] = dist;
+    }
+
+    fn get(&self, point: &LabeledPoint) -> i32 { 
+        let x: usize = (point.x - self.min.x) as usize;
+        let z: usize = (point.z - self.min.z) as usize;
+        self.grid[x][point.y as usize][z]
+    }
+
+    fn increment_distance(&mut self, point: &LabeledPoint) {
+        self.set(point, self.get(point) + 1);
     }
 }
 
@@ -138,7 +152,7 @@ pub fn write_mcfunction(
                         if (gate.z - final_grid.min.z + j) as usize > final_grid.z_size { break; }
                         for k in 0..info.z_dim {
                             if (gate.z - final_grid.min.z + k) as usize > final_grid.x_size { break; }
-                            final_grid.set(Point { x: k, z: j, y: i }, -1);
+                            final_grid.set(&LabeledPoint { x: k, z: j, y: i, label: None }, -1);
                         }
                     }    
                 }
@@ -150,14 +164,28 @@ pub fn write_mcfunction(
 
                 let mut blocks_to_check: Vec<&LabeledPoint> = Vec::new();
                 blocks_to_check.push(&wire.start); // push the starting point to start there
+
+                let end_point: &LabeledPoint = &wire.end;
                 
                 while blocks_to_check.len() > 0 {
-                    // TODO: check current point
-                    // TODO: check four adjacent points and add to list if not occupied
+                    let current: &LabeledPoint = blocks_to_check.get(0).unwrap();
+                    // check current point
+                    if current.compare(end_point) {
+                        temp_grid.increment_distance(current);
+                        break;
+                    }
+
+                    // TODO: check the (up to) six adjacent points and add to list if not occupied
+                    
+
+
                     // TODO: break when the end point is reached
+
+
                 }
 
                 //TODO: Work backward from end point back to start, edit final_grid to set final wire positions
+
             }
         },
         RoutingAlgo::Wireless => {
