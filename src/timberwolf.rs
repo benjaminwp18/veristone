@@ -120,7 +120,7 @@ pub fn anneal(
             }
 
             // Add a text log entry
-            if (accepted && logging_rules & LoggingRules::ON_ACCEPT > 0) || logging_rules & LoggingRules::ON_REJECT > 0 {
+            if (accepted && logging_rules & LoggingRules::ON_ACCEPT > 0) || (!accepted && logging_rules & LoggingRules::ON_REJECT > 0) {
                 let temperature_s = temperature.to_string();
                 let current_cost_s = current_cost.to_string();
                 let delta_cost_s = delta_cost.to_string();
