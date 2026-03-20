@@ -49,21 +49,19 @@ pub enum RoutingAlgo {
     Lee
 }
 
-#[derive(Debug, Deserialize, Clone)]
-enum BlockState {
-    Empty,      // Any air block in the volume
-    Redstone,   // Block containing redstone components
-    Block,      // Block used for connecting gates
-    Gate        // Any block that is occupied by the volume of a gate
-}
-
 struct Grid {
-    min: Point,    // defined as bottom left in the x-z axis
-    max: Point,    // defined as top right in the x-z axis
+    min: Point,              // defined as bottom left in the x-z axis
+    max: Point,              // defined as top right in the x-z axis
     x_size: usize,
     y_size: usize,
     z_size: usize,
-    grid: Vec<Vec<Vec<BlockState>>>
+    /*
+     * grid values defined as follows:
+     *  0 = empty and unchecked
+     *  >0 = checked, marked by distance from starting point
+     *  -1 = gate in this location, will be skipped in propogation
+     */
+    grid: Vec<Vec<Vec<i32>>>
 }
 
 impl Grid {
@@ -72,15 +70,22 @@ impl Grid {
         let z_size: usize = (max.z - min.z).abs().try_into().unwrap();
         let y_size: usize = (if x_size < z_size { z_size * 2 } else { x_size * 2 }).try_into().unwrap();
 
-        Grid { min: min, max: max, x_size:x_size, y_size:y_size, z_size:z_size, grid: vec![vec![vec![BlockState::Empty; x_size]; y_size]; z_size] }
+        Grid { 
+            min: min, 
+            max: max, 
+            x_size:x_size, 
+            y_size:y_size, 
+            z_size:z_size, 
+            grid: vec![vec![vec![0; x_size]; y_size]; z_size] 
+        }
     }
 
-    fn set(&mut self, point: Point, state: BlockState) {
+    fn set(&mut self, point: Point, dist: i32) {
         self.grid
             [(point.x - self.min.x) as usize]
             [point.y as usize]
             [(point.z - self.min.z) as usize]
-        = state;
+        = dist;
 
     }
 }
@@ -99,6 +104,7 @@ pub fn write_mcfunction(
     let mut file = File::create(path).unwrap();
     let file_error: &str = &format!("Failed to write gate to mcfunction file at {MCFUNCTION_PATH}");
 
+    // place gates in the world
     for gate in gates {
         writeln!(file, "place template logic:{}_gate ~{} ~ ~{}", gate.name, gate.x, gate.z).expect(file_error);
     }
@@ -123,13 +129,14 @@ pub fn write_mcfunction(
             for gate in gates {
                 let info = gate_info.get(&gate.name).unwrap();
 
+                // Mark all blocks occupied by gates
                 for i in 0..info.y_dim {
                     if (gate.y - grid.min.y + i) as usize > grid.y_size { break; }
                     for j in 0..info.z_dim {
                         if (gate.z - grid.min.z + j) as usize > grid.z_size { break; }
                         for k in 0..info.z_dim {
                             if (gate.z - grid.min.z + k) as usize > grid.x_size { break; }
-                            grid.set(Point { x: k, z: j, y: i }, BlockState::Gate);
+                            grid.set(Point { x: k, z: j, y: i }, -1);
                         }
                     }    
                 }
@@ -137,7 +144,7 @@ pub fn write_mcfunction(
 
 
             for wire in wires {
-
+                
             }
             // writeln!(file, "fill ~{} ~ ~{} ~{} ~ ~{} minecraft:redstone_wire", wire.start.x, wire.start.z, wire.end.x, wire.end.x).expect(file_error);
         },
