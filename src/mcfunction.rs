@@ -99,8 +99,12 @@ impl Grid {
             self.block_wire_area(point, dist);
         } else {
             let x: usize = (point.x - self.min.x) as usize;
+            let y: usize = point.y as usize;
             let z: usize = (point.x - self.min.x) as usize;
-            self.grid[x][point.y as usize][z] = dist;
+            
+            if !(x >= self.x_size || y >= self.y_size || z >= self.z_size) {
+                self.grid[x][y][z] = dist;
+            }
         }
     }
 
@@ -116,9 +120,15 @@ impl Grid {
         self.grid[x][y][z] = dist;
     }
 
-    fn get(&self, point: &LabeledPoint) -> i32 { 
+    fn get(&self, point: &LabeledPoint) -> i32 {
         let x: usize = (point.x - self.min.x) as usize;
+        let y: usize = point.y as usize;
         let z: usize = (point.z - self.min.z) as usize;
+
+        if x >= self.x_size || y >= self.y_size || z >= self.z_size {
+            return -4;
+        }
+
         self.grid[x][point.y as usize][z]
     }
 
@@ -131,7 +141,7 @@ impl Grid {
         let y: usize = point.y as usize;
         let z: usize = (point.x - self.min.x) as usize;
 
-        x < 0 || x >= self.x_size || y < 0 || y >= self.y_size || z < 0 || z >= self.z_size
+        x >= self.x_size || y >= self.y_size || z >= self.z_size
     }
 }
 
@@ -214,7 +224,7 @@ pub fn write_mcfunction(
                     ];
 
                     for p in checking {
-                        if temp_grid.get(&p) < 0 || !temp_grid.is_inside(&p) {
+                        if temp_grid.get(&p) < 0 {
                             continue;
                         } else {
                             temp_grid.increment_distance(&p);
