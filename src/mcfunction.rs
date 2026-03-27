@@ -1,6 +1,7 @@
 use std::{io::Write, path::Path};
 use std::fs::File;
 use graphviz_rust::attributes::start;
+use graphviz_rust::print;
 use petgraph::algo::condensation;
 use serde_json;
 use std::collections::{
@@ -90,7 +91,7 @@ impl Grid {
             x_size:x_size, 
             y_size:y_size, 
             z_size:z_size, 
-            grid: vec![vec![vec![0; x_size]; y_size]; z_size] 
+            grid: vec![vec![vec![0; z_size]; y_size]; x_size] 
         }
     }
 
@@ -100,7 +101,7 @@ impl Grid {
         } else {
             let x: usize = (point.x - self.min.x) as usize;
             let y: usize = point.y as usize;
-            let z: usize = (point.x - self.min.x) as usize;
+            let z: usize = (point.z - self.min.z) as usize;
             
             if !(x >= self.x_size || y >= self.y_size || z >= self.z_size) {
                 self.grid[x][y][z] = dist;
@@ -111,7 +112,7 @@ impl Grid {
     fn block_wire_area(&mut self, point: &LabeledPoint, dist: i32) {
         let x: usize = (point.x - self.min.x) as usize;
         let y: usize = point.y as usize;
-        let z: usize = (point.x - self.min.x) as usize;
+        let z: usize = (point.z - self.min.z) as usize;
 
         for i in 0..27 {
             self.grid[x-1 + (i/9)][y-1 + (i/3)][z-1 + (i%3)] = dist-1;
@@ -125,23 +126,17 @@ impl Grid {
         let y: usize = point.y as usize;
         let z: usize = (point.z - self.min.z) as usize;
 
+        println!("{}, {}, {}", x, y, z);
+
         if x >= self.x_size || y >= self.y_size || z >= self.z_size {
             return -4;
         }
 
-        self.grid[x][point.y as usize][z]
+        self.grid[x][y][z]
     }
 
     fn increment_distance(&mut self, point: &LabeledPoint) {
         self.set(point, self.get(point) + 1);
-    }
-
-    fn is_inside(&self, point: &LabeledPoint) -> bool {
-        let x: usize = (point.x - self.min.x) as usize;
-        let y: usize = point.y as usize;
-        let z: usize = (point.x - self.min.x) as usize;
-
-        x >= self.x_size || y >= self.y_size || z >= self.z_size
     }
 }
 
@@ -174,7 +169,6 @@ pub fn write_mcfunction(
             let zs = wires.iter().map(|wire| vec![wire.start.z, wire.end.z]).flatten();
             let z_max = zs.clone().max().unwrap();
             let z_min = zs.min().unwrap();
-
 
             // Access to map containing info about all gate types
             let gate_info = read_gate_info();
@@ -228,6 +222,7 @@ pub fn write_mcfunction(
                             continue;
                         } else {
                             temp_grid.increment_distance(&p);
+                            blocks_to_check.push_back(p);
                         }
                     }
                 }
