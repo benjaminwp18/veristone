@@ -14,6 +14,7 @@ serde = "1.0.228"
 # (theoretically optional) For visualization of intermediate representations
 graphviz-rust = "0.9.6"
 plotters = "0.3.7"
+csv = "1.4.0"
 # TODO: consider removing bitmap support
 # plotters = { git = "https://github.com/plotters-rs/plotters.git", default-features = false, features = ["svg"] }
 

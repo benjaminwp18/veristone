@@ -1,77 +1,77 @@
-place template logic:and_gate ~-1 ~ ~12
-place template logic:or_gate ~-16 ~ ~92
-place template logic:and_gate ~2 ~ ~24
-place template logic:xor_gate ~8 ~ ~5
-place template logic:xor_gate ~1 ~ ~2
-setblock ~0 ~-1 ~15 minecraft:redstone_lamp
-setblock ~-16 ~-1 ~92 minecraft:target
-setblock ~-16 ~-2 ~92 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~16 ~1 ~-77 minecraft:redstone_lamp[lit=true] run setblock ~ ~1 ~ minecraft:redstone_block"}
-setblock ~-16 ~-3 ~92 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~16 ~2 ~-77 minecraft:redstone_lamp[lit=false] run setblock ~ ~2 ~ minecraft:target"}
-summon minecraft:armor_stand ~0.5 ~0 ~15.5 {Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: "Y -> full_add#0.y"}
-summon minecraft:armor_stand ~-15.5 ~0 ~92.5 {Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: "full_add#0.y -> A"}
-setblock ~3 ~-1 ~27 minecraft:redstone_lamp
-setblock ~-14 ~-1 ~92 minecraft:target
-setblock ~-14 ~-2 ~92 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~17 ~1 ~-65 minecraft:redstone_lamp[lit=true] run setblock ~ ~1 ~ minecraft:redstone_block"}
-setblock ~-14 ~-3 ~92 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~17 ~2 ~-65 minecraft:redstone_lamp[lit=false] run setblock ~ ~2 ~ minecraft:target"}
-summon minecraft:armor_stand ~3.5 ~0 ~27.5 {Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: "Y -> full_add#0.z"}
-summon minecraft:armor_stand ~-13.5 ~0 ~92.5 {Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: "full_add#0.z -> B"}
-setblock ~-15 ~-1 ~94 minecraft:redstone_lamp
+place template logic:and_gate ~11 ~ ~2
+place template logic:or_gate ~76 ~ ~11
+place template logic:xor_gate ~4 ~ ~0
+place template logic:xor_gate ~0 ~ ~4
+place template logic:and_gate ~57 ~ ~8
+setblock ~12 ~-1 ~5 minecraft:redstone_lamp
+setblock ~76 ~-1 ~11 minecraft:target
+setblock ~76 ~-2 ~11 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~-64 ~1 ~-6 minecraft:redstone_lamp[lit=true] run setblock ~ ~1 ~ minecraft:redstone_block"}
+setblock ~76 ~-3 ~11 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~-64 ~2 ~-6 minecraft:redstone_lamp[lit=false] run setblock ~ ~2 ~ minecraft:target"}
+summon minecraft:armor_stand ~12.5 ~0 ~5.5 {Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: "Y -> full_add#0.y"}
+summon minecraft:armor_stand ~76.5 ~0 ~11.5 {Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: "full_add#0.y -> A"}
+setblock ~58 ~-1 ~11 minecraft:redstone_lamp
+setblock ~78 ~-1 ~11 minecraft:target
+setblock ~78 ~-2 ~11 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~-20 ~1 ~0 minecraft:redstone_lamp[lit=true] run setblock ~ ~1 ~ minecraft:redstone_block"}
+setblock ~78 ~-3 ~11 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~-20 ~2 ~0 minecraft:redstone_lamp[lit=false] run setblock ~ ~2 ~ minecraft:target"}
+summon minecraft:armor_stand ~58.5 ~0 ~11.5 {Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: "Y -> full_add#0.z"}
+summon minecraft:armor_stand ~78.5 ~0 ~11.5 {Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: "full_add#0.z -> B"}
+setblock ~77 ~-1 ~13 minecraft:redstone_lamp
 setblock ~-6 ~0 ~0 minecraft:target
-setblock ~-6 ~-1 ~0 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~-9 ~0 ~94 minecraft:redstone_lamp[lit=true] run setblock ~ ~1 ~ minecraft:redstone_block"}
-setblock ~-6 ~-2 ~0 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~-9 ~1 ~94 minecraft:redstone_lamp[lit=false] run setblock ~ ~2 ~ minecraft:target"}
-summon minecraft:armor_stand ~-14.5 ~0 ~94.5 {Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: "Y -> full_add#0.cout"}
+setblock ~-6 ~-1 ~0 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~83 ~0 ~13 minecraft:redstone_lamp[lit=true] run setblock ~ ~1 ~ minecraft:redstone_block"}
+setblock ~-6 ~-2 ~0 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~83 ~1 ~13 minecraft:redstone_lamp[lit=false] run setblock ~ ~2 ~ minecraft:target"}
+summon minecraft:armor_stand ~77.5 ~0 ~13.5 {Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: "Y -> full_add#0.cout"}
 summon minecraft:armor_stand ~-5.5 ~1 ~0.5 {Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: "full_add#0.cout"}
 setblock ~-4 ~0 ~0 minecraft:redstone_lamp
-setblock ~1 ~-1 ~2 minecraft:target
-setblock ~1 ~-2 ~2 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~-5 ~2 ~-2 minecraft:redstone_lamp[lit=true] run setblock ~ ~1 ~ minecraft:redstone_block"}
-setblock ~1 ~-3 ~2 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~-5 ~3 ~-2 minecraft:redstone_lamp[lit=false] run setblock ~ ~2 ~ minecraft:target"}
+setblock ~4 ~-1 ~0 minecraft:target
+setblock ~4 ~-2 ~0 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~-8 ~2 ~0 minecraft:redstone_lamp[lit=true] run setblock ~ ~1 ~ minecraft:redstone_block"}
+setblock ~4 ~-3 ~0 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~-8 ~3 ~0 minecraft:redstone_lamp[lit=false] run setblock ~ ~2 ~ minecraft:target"}
 summon minecraft:armor_stand ~-3.5 ~1 ~0.5 {Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: "full_add#0.a"}
-summon minecraft:armor_stand ~1.5 ~0 ~2.5 {Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: "full_add#0.a -> A"}
+summon minecraft:armor_stand ~4.5 ~0 ~0.5 {Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: "full_add#0.a -> A"}
 setblock ~-4 ~0 ~0 minecraft:redstone_lamp
-setblock ~-1 ~-1 ~12 minecraft:target
-setblock ~-1 ~-2 ~12 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~-3 ~2 ~-12 minecraft:redstone_lamp[lit=true] run setblock ~ ~1 ~ minecraft:redstone_block"}
-setblock ~-1 ~-3 ~12 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~-3 ~3 ~-12 minecraft:redstone_lamp[lit=false] run setblock ~ ~2 ~ minecraft:target"}
+setblock ~11 ~-1 ~2 minecraft:target
+setblock ~11 ~-2 ~2 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~-15 ~2 ~-2 minecraft:redstone_lamp[lit=true] run setblock ~ ~1 ~ minecraft:redstone_block"}
+setblock ~11 ~-3 ~2 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~-15 ~3 ~-2 minecraft:redstone_lamp[lit=false] run setblock ~ ~2 ~ minecraft:target"}
 summon minecraft:armor_stand ~-3.5 ~1 ~0.5 {Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: "full_add#0.a"}
-summon minecraft:armor_stand ~-0.5 ~0 ~12.5 {Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: "full_add#0.a -> A"}
+summon minecraft:armor_stand ~11.5 ~0 ~2.5 {Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: "full_add#0.a -> A"}
 setblock ~-4 ~0 ~2 minecraft:redstone_lamp
-setblock ~3 ~-1 ~2 minecraft:target
-setblock ~3 ~-2 ~2 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~-7 ~2 ~0 minecraft:redstone_lamp[lit=true] run setblock ~ ~1 ~ minecraft:redstone_block"}
-setblock ~3 ~-3 ~2 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~-7 ~3 ~0 minecraft:redstone_lamp[lit=false] run setblock ~ ~2 ~ minecraft:target"}
+setblock ~6 ~-1 ~0 minecraft:target
+setblock ~6 ~-2 ~0 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~-10 ~2 ~2 minecraft:redstone_lamp[lit=true] run setblock ~ ~1 ~ minecraft:redstone_block"}
+setblock ~6 ~-3 ~0 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~-10 ~3 ~2 minecraft:redstone_lamp[lit=false] run setblock ~ ~2 ~ minecraft:target"}
 summon minecraft:armor_stand ~-3.5 ~1 ~2.5 {Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: "full_add#0.b"}
-summon minecraft:armor_stand ~3.5 ~0 ~2.5 {Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: "full_add#0.b -> B"}
+summon minecraft:armor_stand ~6.5 ~0 ~0.5 {Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: "full_add#0.b -> B"}
 setblock ~-4 ~0 ~2 minecraft:redstone_lamp
-setblock ~1 ~-1 ~12 minecraft:target
-setblock ~1 ~-2 ~12 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~-5 ~2 ~-10 minecraft:redstone_lamp[lit=true] run setblock ~ ~1 ~ minecraft:redstone_block"}
-setblock ~1 ~-3 ~12 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~-5 ~3 ~-10 minecraft:redstone_lamp[lit=false] run setblock ~ ~2 ~ minecraft:target"}
+setblock ~13 ~-1 ~2 minecraft:target
+setblock ~13 ~-2 ~2 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~-17 ~2 ~0 minecraft:redstone_lamp[lit=true] run setblock ~ ~1 ~ minecraft:redstone_block"}
+setblock ~13 ~-3 ~2 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~-17 ~3 ~0 minecraft:redstone_lamp[lit=false] run setblock ~ ~2 ~ minecraft:target"}
 summon minecraft:armor_stand ~-3.5 ~1 ~2.5 {Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: "full_add#0.b"}
-summon minecraft:armor_stand ~1.5 ~0 ~12.5 {Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: "full_add#0.b -> B"}
-setblock ~2 ~-1 ~6 minecraft:redstone_lamp
-setblock ~8 ~-1 ~5 minecraft:target
-setblock ~8 ~-2 ~5 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~-6 ~1 ~1 minecraft:redstone_lamp[lit=true] run setblock ~ ~1 ~ minecraft:redstone_block"}
-setblock ~8 ~-3 ~5 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~-6 ~2 ~1 minecraft:redstone_lamp[lit=false] run setblock ~ ~2 ~ minecraft:target"}
-summon minecraft:armor_stand ~2.5 ~0 ~6.5 {Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: "Y -> full_add#0.x"}
-summon minecraft:armor_stand ~8.5 ~0 ~5.5 {Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: "full_add#0.x -> A"}
-setblock ~2 ~-1 ~6 minecraft:redstone_lamp
-setblock ~2 ~-1 ~24 minecraft:target
-setblock ~2 ~-2 ~24 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~0 ~1 ~-18 minecraft:redstone_lamp[lit=true] run setblock ~ ~1 ~ minecraft:redstone_block"}
-setblock ~2 ~-3 ~24 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~0 ~2 ~-18 minecraft:redstone_lamp[lit=false] run setblock ~ ~2 ~ minecraft:target"}
-summon minecraft:armor_stand ~2.5 ~0 ~6.5 {Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: "Y -> full_add#0.x"}
-summon minecraft:armor_stand ~2.5 ~0 ~24.5 {Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: "full_add#0.x -> A"}
+summon minecraft:armor_stand ~13.5 ~0 ~2.5 {Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: "full_add#0.b -> B"}
+setblock ~5 ~-1 ~4 minecraft:redstone_lamp
+setblock ~0 ~-1 ~4 minecraft:target
+setblock ~0 ~-2 ~4 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~5 ~1 ~0 minecraft:redstone_lamp[lit=true] run setblock ~ ~1 ~ minecraft:redstone_block"}
+setblock ~0 ~-3 ~4 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~5 ~2 ~0 minecraft:redstone_lamp[lit=false] run setblock ~ ~2 ~ minecraft:target"}
+summon minecraft:armor_stand ~5.5 ~0 ~4.5 {Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: "Y -> full_add#0.x"}
+summon minecraft:armor_stand ~0.5 ~0 ~4.5 {Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: "full_add#0.x -> A"}
+setblock ~5 ~-1 ~4 minecraft:redstone_lamp
+setblock ~57 ~-1 ~8 minecraft:target
+setblock ~57 ~-2 ~8 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~-52 ~1 ~-4 minecraft:redstone_lamp[lit=true] run setblock ~ ~1 ~ minecraft:redstone_block"}
+setblock ~57 ~-3 ~8 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~-52 ~2 ~-4 minecraft:redstone_lamp[lit=false] run setblock ~ ~2 ~ minecraft:target"}
+summon minecraft:armor_stand ~5.5 ~0 ~4.5 {Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: "Y -> full_add#0.x"}
+summon minecraft:armor_stand ~57.5 ~0 ~8.5 {Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: "full_add#0.x -> A"}
 setblock ~-4 ~0 ~4 minecraft:redstone_lamp
-setblock ~10 ~-1 ~5 minecraft:target
-setblock ~10 ~-2 ~5 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~-14 ~2 ~-1 minecraft:redstone_lamp[lit=true] run setblock ~ ~1 ~ minecraft:redstone_block"}
-setblock ~10 ~-3 ~5 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~-14 ~3 ~-1 minecraft:redstone_lamp[lit=false] run setblock ~ ~2 ~ minecraft:target"}
+setblock ~2 ~-1 ~4 minecraft:target
+setblock ~2 ~-2 ~4 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~-6 ~2 ~0 minecraft:redstone_lamp[lit=true] run setblock ~ ~1 ~ minecraft:redstone_block"}
+setblock ~2 ~-3 ~4 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~-6 ~3 ~0 minecraft:redstone_lamp[lit=false] run setblock ~ ~2 ~ minecraft:target"}
 summon minecraft:armor_stand ~-3.5 ~1 ~4.5 {Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: "full_add#0.cin"}
-summon minecraft:armor_stand ~10.5 ~0 ~5.5 {Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: "full_add#0.cin -> B"}
+summon minecraft:armor_stand ~2.5 ~0 ~4.5 {Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: "full_add#0.cin -> B"}
 setblock ~-4 ~0 ~4 minecraft:redstone_lamp
-setblock ~4 ~-1 ~24 minecraft:target
-setblock ~4 ~-2 ~24 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~-8 ~2 ~-20 minecraft:redstone_lamp[lit=true] run setblock ~ ~1 ~ minecraft:redstone_block"}
-setblock ~4 ~-3 ~24 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~-8 ~3 ~-20 minecraft:redstone_lamp[lit=false] run setblock ~ ~2 ~ minecraft:target"}
+setblock ~59 ~-1 ~8 minecraft:target
+setblock ~59 ~-2 ~8 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~-63 ~2 ~-4 minecraft:redstone_lamp[lit=true] run setblock ~ ~1 ~ minecraft:redstone_block"}
+setblock ~59 ~-3 ~8 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~-63 ~3 ~-4 minecraft:redstone_lamp[lit=false] run setblock ~ ~2 ~ minecraft:target"}
 summon minecraft:armor_stand ~-3.5 ~1 ~4.5 {Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: "full_add#0.cin"}
-summon minecraft:armor_stand ~4.5 ~0 ~24.5 {Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: "full_add#0.cin -> B"}
-setblock ~9 ~-1 ~9 minecraft:redstone_lamp
+summon minecraft:armor_stand ~59.5 ~0 ~8.5 {Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: "full_add#0.cin -> B"}
+setblock ~1 ~-1 ~8 minecraft:redstone_lamp
 setblock ~-6 ~0 ~2 minecraft:target
-setblock ~-6 ~-1 ~2 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~15 ~0 ~7 minecraft:redstone_lamp[lit=true] run setblock ~ ~1 ~ minecraft:redstone_block"}
-setblock ~-6 ~-2 ~2 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~15 ~1 ~7 minecraft:redstone_lamp[lit=false] run setblock ~ ~2 ~ minecraft:target"}
-summon minecraft:armor_stand ~9.5 ~0 ~9.5 {Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: "Y -> full_add#0.sum"}
+setblock ~-6 ~-1 ~2 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~7 ~0 ~6 minecraft:redstone_lamp[lit=true] run setblock ~ ~1 ~ minecraft:redstone_block"}
+setblock ~-6 ~-2 ~2 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~7 ~1 ~6 minecraft:redstone_lamp[lit=false] run setblock ~ ~2 ~ minecraft:target"}
+summon minecraft:armor_stand ~1.5 ~0 ~8.5 {Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: "Y -> full_add#0.sum"}
 summon minecraft:armor_stand ~-5.5 ~1 ~2.5 {Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: "full_add#0.sum"}

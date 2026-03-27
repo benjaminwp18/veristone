@@ -1,5 +1,5 @@
 use petgraph::{graph::{self, NodeIndex}, Directed};
-use std::{cmp::{max, min}, collections::HashMap, fs::File, io::Write, path::Path};
+use std::{cmp::{max, min}, collections::HashMap, fs::File, io::{self, Write}, path::Path};
 use rand::{Rng, seq::IndexedRandom};
 use plotters::{drawing::IntoDrawingArea, prelude, style::{IntoFont, Palette, Palette99, ShapeStyle}};
 
@@ -25,6 +25,7 @@ const BOUND_COST_WEIGHT: f32 = 4.0;  // Should be higher than overlap in case ga
 const TEI_COST_WEIGHT: f32 = 1.5;
 
 const LOG_PATH: &'static str = "res/logs/timberwolf.log";
+const CSV_LOG_PATH: &'static str = "res/logs/timberwolf.csv";
 const GRAPH_PATH: &'static str = "res/graphs/timberwolf.svg";
 
 #[allow(non_snake_case)]
@@ -32,20 +33,21 @@ pub mod LoggingRules {
     pub const TO_FILE: u8 = 0x01;
     pub const TO_STDOUT: u8 = 0x02;
     pub const TO_GRAPH: u8 = 0x04;
-    pub const ON_ACCEPT: u8 = 0x08;
-    pub const ON_REJECT: u8 = 0x10;
-    pub const ALWAYS: u8 = 0x18;
+    pub const TO_CSV: u8 = 0x08;
+    pub const ON_ACCEPT: u8 = 0x10;
+    pub const ON_REJECT: u8 = 0x20;
+    pub const ALWAYS: u8 = 0x30;
 }
 
 enum Perturbation<'a> {
-    Move { idx: &'a NodeIndex, end: mcfunction::Point },
+    Move { idx: &'a NodeIndex, start: mcfunction::Point, end: mcfunction::Point },
     Swap { idx1: &'a NodeIndex, idx2: &'a NodeIndex, end1: mcfunction::Point, end2: mcfunction::Point }
 }
 
 impl <'a> Perturbation<'a> {
     fn to_string(&self, idx_to_int: &HashMap<&NodeIndex, u32>) -> String {
         match self {
-            Perturbation::Move { idx, end } => {
+            Perturbation::Move { idx, start, end } => {
                 return format!("Move {} -> {end}", idx_to_int.get(*idx).unwrap());
             },
             Perturbation::Swap { idx1, idx2, end1, end2 } => {
@@ -71,8 +73,12 @@ pub fn anneal(
     let mut temperature = TEMPERATURE_START;
 
     let path: &Path = Path::new(LOG_PATH);
-    let mut log_file = File::create(path).unwrap();
+    let mut log_file: File = File::create(path).unwrap();
     let file_error: &str = &format!("Failed to write entry to Timberwolf log file at {LOG_PATH}");
+
+    let csv_path: &Path = Path::new(CSV_LOG_PATH);
+    let mut csv_file = csv::Writer::from_path(csv_path).unwrap();
+    csv_file.serialize(("T", "current_cost", "candidate_cost", "probability", "accepted", "type", "idx1", "x1", "z1", "idx2", "x2", "z2")).unwrap();
 
     // Plot series data
     let mut series_vec: Vec<Vec<(i32, i32)>> = vec![];
@@ -100,7 +106,7 @@ pub fn anneal(
             if accepted {
                 // Record perturbations for later plotting
                 match &perturbation {
-                    Perturbation::Move { idx, end } => {
+                    Perturbation::Move { idx, start, end } => {
                         series_map.get_mut(idx).unwrap().push((end.x, end.z));
                     },
                     Perturbation::Swap { idx1, idx2, end1, end2 } => {
@@ -144,12 +150,50 @@ pub fn anneal(
                 if logging_rules & LoggingRules::TO_FILE > 0 {
                     writeln!(log_file, "{entry}").expect(file_error);
                 }
+                if logging_rules & LoggingRules::TO_CSV > 0 {
+                    match &perturbation {
+                        Perturbation::Move { idx, start, end } => {
+                            csv_file.serialize((
+                                temperature_s, 
+                                current_cost_s, 
+                                candidate_cost_s, 
+                                probability_s, 
+                                accepted, 
+                                "Move",
+                                idx_to_int.get(*idx).unwrap(),
+                                start.x,
+                                start.z,
+                                "",
+                                end.x,
+                                end.z
+                            )).unwrap();
+                        }
+                        Perturbation::Swap { idx1, idx2, end1, end2 } => {
+                            csv_file.serialize((
+                                temperature_s, 
+                                current_cost_s, 
+                                candidate_cost_s, 
+                                probability_s, 
+                                accepted,
+                                "Swap",
+                                idx_to_int.get(*idx1).unwrap(),
+                                end1.x,
+                                end1.z,
+                                idx_to_int.get(*idx2).unwrap(),
+                                end2.x,
+                                end2.z
+                            )).unwrap();
+                        }
+                    }
+                }
             }
         }
 
         // Temperature tends to 0 across annealing
         temperature = temperature_multiplier(temperature) * temperature;
     }
+
+    csv_file.flush().unwrap();
 
     if logging_rules & LoggingRules::TO_GRAPH > 0 {
         // Move the last series to the vectors
@@ -314,14 +358,19 @@ fn perturb<'a>(state: &mut HashMap<NodeIndex, mcfunction::Gate>, idxs: &'a Vec<N
             // Move
             let random_idx = idxs.choose(&mut rand::rng()).unwrap();
             let gate = state.get_mut(random_idx).unwrap();
+            let start_point = mcfunction::Point {
+                    x: gate.x, 
+                    z: gate.z 
+                };
             gate.x += rand::rng().random_range(-5..=5);
             gate.z += rand::rng().random_range(-5..=5);
 
             return Perturbation::Move {
                 idx: random_idx,
+                start: start_point,
                 end: mcfunction::Point {
-                    x: state.get(random_idx).unwrap().x,
-                    z: state.get(random_idx).unwrap().z
+                    x: gate.x,
+                    z: gate.z
                 }
             };
         }
