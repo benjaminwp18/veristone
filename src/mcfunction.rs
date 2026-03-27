@@ -126,7 +126,7 @@ impl Grid {
         let y: usize = point.y as usize;
         let z: usize = (point.z - self.min.z) as usize;
 
-        println!("{}, {}, {}", x, y, z);
+        //println!("{}, {}, {}", x, y, z);
 
         if x >= self.x_size || y >= self.y_size || z >= self.z_size {
             return -4;
@@ -218,7 +218,7 @@ pub fn write_mcfunction(
                     ];
 
                     for p in checking {
-                        if temp_grid.get(&p) < 0 {
+                        if temp_grid.get(&p) != 0 {
                             continue;
                         } else {
                             temp_grid.increment_distance(&p);
