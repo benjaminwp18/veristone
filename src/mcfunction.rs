@@ -71,8 +71,9 @@ struct Grid {
      * grid values defined as follows:
      *  0 = empty and unchecked
      *  >0 = checked, marked by distance from starting point
-     *  -1 = gate in this location, skipped in propogation
-     *  -2 = wire in this location, skiped in propogation
+     *  -1 = gate in this location
+     *  -2 = wire in this location
+     *  -3 = borders a wire
      */
     grid: Vec<Vec<Vec<i32>>>
 }
@@ -95,7 +96,7 @@ impl Grid {
 
     fn set(&mut self, point: &LabeledPoint, dist: i32) {
         if dist == -2 {
-            self.set_adjacent(point, dist);
+            self.block_wire_area(point, dist);
         } else {
             let x: usize = (point.x - self.min.x) as usize;
             let z: usize = (point.x - self.min.x) as usize;
@@ -103,15 +104,16 @@ impl Grid {
         }
     }
 
-    // sets specified point and all others adjacent in 3d space
-    fn set_adjacent(&mut self, point: &LabeledPoint, dist: i32) {
+    fn block_wire_area(&mut self, point: &LabeledPoint, dist: i32) {
         let x: usize = (point.x - self.min.x) as usize;
         let y: usize = point.y as usize;
         let z: usize = (point.x - self.min.x) as usize;
 
         for i in 0..27 {
-            self.grid[x-1 + (i/9)][y-1 + (i/3)][z-1 + (i%3)] = dist;
+            self.grid[x-1 + (i/9)][y-1 + (i/3)][z-1 + (i%3)] = dist-1;
         }
+
+        self.grid[x][y][z] = dist;
     }
 
     fn get(&self, point: &LabeledPoint) -> i32 { 
@@ -198,7 +200,6 @@ pub fn write_mcfunction(
                     let current: LabeledPoint = blocks_to_check.pop_front().unwrap();
                     // check current point
                     if current.compare(&end_point) {
-                        temp_grid.increment_distance(&current);
                         break;
                     }
                     
@@ -219,11 +220,9 @@ pub fn write_mcfunction(
                             temp_grid.increment_distance(&p);
                         }
                     }
-
-
                 }
 
-                //TODO: Work backward from end point back to start, edit final_grid to set final wire positions
+                // Work backward from end point back to start, edit final_grid to set final wire positions
                 let mut current: LabeledPoint = end_point;
                 while !current.compare(&wire.start) {
                     let checking = [
@@ -245,6 +244,17 @@ pub fn write_mcfunction(
                 }
 
                 final_grid = temp_grid;
+            }
+
+            for x in 0..final_grid.grid.len() {
+                for y in 0..final_grid.grid[0].len() {
+                    for z in 0.. final_grid.grid[0][0].len() {
+                        if final_grid.grid[x][y][z] == -2 {
+                            writeln!(file, "setblock ~{} ~{} ~{} minecraft:pink_wool", x, y, z).expect(file_error);
+                            writeln!(file, "setblock ~{} ~{} ~{} minecraft:redstone_wire", x, y+1, z).expect(file_error);
+                        }
+                    }
+                }
             }
         },
         RoutingAlgo::Wireless => {
