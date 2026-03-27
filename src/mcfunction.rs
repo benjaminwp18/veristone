@@ -1,8 +1,12 @@
 use std::{io::Write, path::Path};
 use std::fs::File;
 use graphviz_rust::attributes::start;
+use petgraph::algo::condensation;
 use serde_json;
-use std::collections::HashMap;
+use std::collections::{
+    HashMap,
+    VecDeque
+};
 use std::fs;
 use serde::Deserialize;
 
@@ -90,9 +94,24 @@ impl Grid {
     }
 
     fn set(&mut self, point: &LabeledPoint, dist: i32) {
+        if dist == -2 {
+            self.set_adjacent(point, dist);
+        } else {
+            let x: usize = (point.x - self.min.x) as usize;
+            let z: usize = (point.x - self.min.x) as usize;
+            self.grid[x][point.y as usize][z] = dist;
+        }
+    }
+
+    // sets specified point and all others adjacent in 3d space
+    fn set_adjacent(&mut self, point: &LabeledPoint, dist: i32) {
         let x: usize = (point.x - self.min.x) as usize;
+        let y: usize = point.y as usize;
         let z: usize = (point.x - self.min.x) as usize;
-        self.grid[x][point.y as usize][z] = dist;
+
+        for i in 0..27 {
+            self.grid[x-1 + (i/9)][y-1 + (i/3)][z-1 + (i%3)] = dist;
+        }
     }
 
     fn get(&self, point: &LabeledPoint) -> i32 { 
@@ -103,6 +122,14 @@ impl Grid {
 
     fn increment_distance(&mut self, point: &LabeledPoint) {
         self.set(point, self.get(point) + 1);
+    }
+
+    fn is_inside(&self, point: &LabeledPoint) -> bool {
+        let x: usize = (point.x - self.min.x) as usize;
+        let y: usize = point.y as usize;
+        let z: usize = (point.x - self.min.x) as usize;
+
+        x < 0 || x >= self.x_size || y < 0 || y >= self.y_size || z < 0 || z >= self.z_size
     }
 }
 
@@ -162,30 +189,62 @@ pub fn write_mcfunction(
             for wire in wires {
                 let mut temp_grid: Grid = final_grid.clone();
 
-                let mut blocks_to_check: Vec<&LabeledPoint> = Vec::new();
-                blocks_to_check.push(&wire.start); // push the starting point to start there
+                let mut blocks_to_check: VecDeque<LabeledPoint> = VecDeque::new();
+                blocks_to_check.push_back(wire.start.clone()); // push the starting point to start there
 
-                let end_point: &LabeledPoint = &wire.end;
+                let end_point: LabeledPoint = wire.end.clone();
                 
                 while blocks_to_check.len() > 0 {
-                    let current: &LabeledPoint = blocks_to_check.get(0).unwrap();
+                    let current: LabeledPoint = blocks_to_check.pop_front().unwrap();
                     // check current point
-                    if current.compare(end_point) {
-                        temp_grid.increment_distance(current);
+                    if current.compare(&end_point) {
+                        temp_grid.increment_distance(&current);
                         break;
                     }
-
-                    // TODO: check the (up to) six adjacent points and add to list if not occupied
                     
+                    // check adjacent points and add them to list if applicable
+                    let checking = [
+                        LabeledPoint{x:current.x+1, y:current.y,   z:current.z,   label:None},
+                        LabeledPoint{x:current.x,   y:current.y,   z:current.z+1, label:None},
+                        LabeledPoint{x:current.x-1, y:current.y,   z:current.z,   label:None},
+                        LabeledPoint{x:current.x,   y:current.y,   z:current.z-1, label:None},
+                        LabeledPoint{x:current.x,   y:current.y+1, z:current.z,   label:None},
+                        LabeledPoint{x:current.x,   y:current.y-1, z:current.z,   label:None}
+                    ];
 
-
-                    // TODO: break when the end point is reached
+                    for p in checking {
+                        if temp_grid.get(&p) < 0 || !temp_grid.is_inside(&p) {
+                            continue;
+                        } else {
+                            temp_grid.increment_distance(&p);
+                        }
+                    }
 
 
                 }
 
                 //TODO: Work backward from end point back to start, edit final_grid to set final wire positions
+                let mut current: LabeledPoint = end_point;
+                while !current.compare(&wire.start) {
+                    let checking = [
+                        LabeledPoint{x:current.x+1, y:current.y,   z:current.z,   label:None},
+                        LabeledPoint{x:current.x,   y:current.y,   z:current.z+1, label:None},
+                        LabeledPoint{x:current.x-1, y:current.y,   z:current.z,   label:None},
+                        LabeledPoint{x:current.x,   y:current.y,   z:current.z-1, label:None},
+                        LabeledPoint{x:current.x,   y:current.y+1, z:current.z,   label:None},
+                        LabeledPoint{x:current.x,   y:current.y-1, z:current.z,   label:None}
+                    ];
 
+                    for p in checking {
+                        let value = temp_grid.get(&p);
+                        if value > 0 && value < temp_grid.get(&current) {
+                            current = p.clone();
+                            break;
+                        }   
+                    }
+                }
+
+                final_grid = temp_grid;
             }
         },
         RoutingAlgo::Wireless => {
