@@ -96,16 +96,12 @@ impl Grid {
     }
 
     fn set(&mut self, point: &LabeledPoint, dist: i32) {
-        if dist == -2 {
-            self.block_wire_area(point, dist);
-        } else {
-            let x: usize = (point.x - self.min.x) as usize;
-            let y: usize = point.y as usize;
-            let z: usize = (point.z - self.min.z) as usize;
+        let x: usize = (point.x - self.min.x) as usize;
+        let y: usize = point.y as usize;
+        let z: usize = (point.z - self.min.z) as usize;
             
-            if !(x >= self.x_size || y >= self.y_size || z >= self.z_size) {
-                self.grid[x][y][z] = dist;
-            }
+        if !(x >= self.x_size || y >= self.y_size || z >= self.z_size) {
+            self.grid[x][y][z] = dist;
         }
     }
 
@@ -126,12 +122,13 @@ impl Grid {
         let y: usize = point.y as usize;
         let z: usize = (point.z - self.min.z) as usize;
 
-        //println!("{}, {}, {}", x, y, z);
 
         if x >= self.x_size || y >= self.y_size || z >= self.z_size {
+            //println!("{}, {}, {}", x, y, z);
             return -4;
         }
 
+        //println!("{}, {}, {}", self.x_size, self.y_size, self.z_size);
         self.grid[x][y][z]
     }
 
@@ -199,9 +196,13 @@ pub fn write_mcfunction(
                 blocks_to_check.push_back(wire.start.clone()); // push the starting point to start there
 
                 let end_point: LabeledPoint = wire.end.clone();
+                let start_point: LabeledPoint = wire.start.clone();
+                println!("{}, {}, {}", start_point.x, start_point.y, start_point.y);
+                println!("{}, {}, {}", end_point.x, end_point.y, end_point.y);
                 
                 while blocks_to_check.len() > 0 {
                     let current: LabeledPoint = blocks_to_check.pop_front().unwrap();
+                    let value = temp_grid.get(&current);
                     // check current point
                     if current.compare(&end_point) {
                         break;
@@ -221,15 +222,32 @@ pub fn write_mcfunction(
                         if temp_grid.get(&p) != 0 {
                             continue;
                         } else {
-                            temp_grid.increment_distance(&p);
+                            temp_grid.set(&p, value+1);
                             blocks_to_check.push_back(p);
                         }
                     }
                 }
 
+/*
+for x in 0..temp_grid.grid.len() {
+                for y in 0..temp_grid.grid[0].len() {
+                    for z in 0.. temp_grid.grid[0][0].len() {
+                        println!("{}", temp_grid.get(&LabeledPoint{x:x as i32, y:y as i32, z:z as i32, label:None}));
+                    }
+                }
+            }*/
+                //println!("{}", temp_grid.get(&LabeledPoint{x:5,y:2,z:5,label:None}));
+
+                
+
+
+
                 // Work backward from end point back to start, edit final_grid to set final wire positions
                 let mut current: LabeledPoint = end_point;
+                println!("{}, {}, {}", current.x, current.y, current.z);
+                let mut wire_list: Vec<LabeledPoint> = Vec::new();
                 while !current.compare(&wire.start) {
+                    wire_list.push(current.clone());
                     let checking = [
                         LabeledPoint{x:current.x+1, y:current.y,   z:current.z,   label:None},
                         LabeledPoint{x:current.x,   y:current.y,   z:current.z+1, label:None},
@@ -241,11 +259,16 @@ pub fn write_mcfunction(
 
                     for p in checking {
                         let value = temp_grid.get(&p);
+                        //println!("{}", value);
                         if value > 0 && value < temp_grid.get(&current) {
                             current = p.clone();
                             break;
-                        }   
+                        }
                     }
+                }
+
+                for p in wire_list {
+                    temp_grid.block_wire_area(&p, -2);
                 }
 
                 final_grid = temp_grid;
@@ -255,8 +278,8 @@ pub fn write_mcfunction(
                 for y in 0..final_grid.grid[0].len() {
                     for z in 0.. final_grid.grid[0][0].len() {
                         if final_grid.grid[x][y][z] == -2 {
-                            writeln!(file, "setblock ~{} ~{} ~{} minecraft:pink_wool", x, y, z).expect(file_error);
-                            writeln!(file, "setblock ~{} ~{} ~{} minecraft:redstone_wire", x, y+1, z).expect(file_error);
+                            writeln!(file, "setblock ~{} ~{} ~{} minecraft:pink_wool", x, y-1, z).expect(file_error);
+                            writeln!(file, "setblock ~{} ~{} ~{} minecraft:redstone_wire", x, y, z).expect(file_error);
                         }
                     }
                 }
