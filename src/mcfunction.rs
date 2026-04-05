@@ -85,13 +85,13 @@ impl Grid {
         let z_size: usize = (max.z - min.z).abs().try_into().unwrap();
         let y_size: usize = (if x_size < z_size { z_size * 2 } else { x_size * 2 }).try_into().unwrap();
 
-        Grid { 
-            min: min, 
-            max: max, 
-            x_size:x_size, 
-            y_size:y_size, 
-            z_size:z_size, 
-            grid: vec![vec![vec![0; z_size]; y_size]; x_size] 
+        Grid {
+            min: min,
+            max: max,
+            x_size:x_size,
+            y_size:y_size,
+            z_size:z_size,
+            grid: vec![vec![vec![0; z_size]; y_size]; x_size]
         }
     }
 
@@ -99,7 +99,7 @@ impl Grid {
         let x: usize = (point.x - self.min.x) as usize;
         let y: usize = point.y as usize;
         let z: usize = (point.z - self.min.z) as usize;
-            
+
         if !(x >= self.x_size || y >= self.y_size || z >= self.z_size) {
             self.grid[x][y][z] = dist;
         }
@@ -184,7 +184,7 @@ pub fn write_mcfunction(
                             if (gate.z - final_grid.min.z + k) as usize > final_grid.x_size { break; }
                             final_grid.set(&LabeledPoint { x: k, z: j, y: i, label: None }, -1);
                         }
-                    }    
+                    }
                 }
             }
 
@@ -199,7 +199,7 @@ pub fn write_mcfunction(
                 let start_point: LabeledPoint = wire.start.clone();
                 println!("{}, {}, {}", start_point.x, start_point.y, start_point.y);
                 println!("{}, {}, {}", end_point.x, end_point.y, end_point.y);
-                
+
                 while blocks_to_check.len() > 0 {
                     let current: LabeledPoint = blocks_to_check.pop_front().unwrap();
                     let value = temp_grid.get(&current);
@@ -207,7 +207,7 @@ pub fn write_mcfunction(
                     if current.compare(&end_point) {
                         break;
                     }
-                    
+
                     // check adjacent points and add them to list if applicable
                     let checking = [
                         LabeledPoint{x:current.x+1, y:current.y,   z:current.z,   label:None},
@@ -238,7 +238,7 @@ for x in 0..temp_grid.grid.len() {
             }*/
                 //println!("{}", temp_grid.get(&LabeledPoint{x:5,y:2,z:5,label:None}));
 
-                
+
 
 
 
