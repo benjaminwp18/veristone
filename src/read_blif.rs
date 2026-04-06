@@ -289,7 +289,7 @@ fn get_wires(
                     start = Some(mcfunction::LabeledPoint {
                         x: source_gate_meta.x + source_pin_offset.x,
                         z: source_gate_meta.z + source_pin_offset.z,
-                        y: -1,
+                        y: 0,
                         label: Some(format!("{} -> {}", edge.weight(), node_weight.name))
                     });
                 }
@@ -311,7 +311,7 @@ fn get_wires(
                     ends.push(mcfunction::LabeledPoint {
                         x: target_gate_meta.x + target_pin_offset.x,
                         z: target_gate_meta.z + target_pin_offset.z,
-                        y: -1,
+                        y: 0,
                         label: Some(format!("{} -> {}", node_weight.name, edge.weight()))
                     });
                 }
