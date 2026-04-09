@@ -196,6 +196,32 @@ impl Grid {
     }
 }
 
+impl std::fmt::Display for Grid {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        writeln!(f, "GRID: {}x{}x{} at ({}, {}, {})",
+            self.x_size, self.y_size, self.z_size,
+            self.min.x, self.min.y, self.min.z)?;
+        for y in 0..self.y_size {
+            writeln!(f, "Y-Layer y={y}")?;
+            write!(f, " X\\Z ")?;
+            for z in 0..self.z_size {
+                write!(f, "{:2} ", self.min.z + (z as i32))?;
+            }
+            writeln!(f)?;
+
+            for x in 0..self.x_size {
+                write!(f, " {:2}  ", self.min.x + (x as i32))?;
+                for z in 0..self.z_size {
+                    write!(f, "{:2} ", self.grid[x][y][z])?;
+                }
+                writeln!(f)?;
+            }
+            writeln!(f)?;
+        }
+        Ok(())
+    }
+}
+
 pub fn read_gate_info() -> HashMap<String, GateInfo> {
     let gate_info_str = fs::read_to_string("res/gate_info.json")
         .expect("Failed to read gate info file");
@@ -306,7 +332,7 @@ pub fn write_mcfunction(
                     }
                 }
 
-                println!("grid: {:?}", temp_grid.grid);
+                println!("{temp_grid}");
 
                 // Work backward from end point back to start &
                 // edit final_grid to set final wire positions
