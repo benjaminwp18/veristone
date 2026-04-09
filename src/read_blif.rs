@@ -325,12 +325,10 @@ fn get_wires(
                     output_idx += 1;
                 }
 
-                for end in ends {
-                    wires.push(mcfunction::Wire {
-                        start: start.clone().unwrap(),
-                        end: end
-                    });
-                }
+                wires.push(mcfunction::Wire {
+                    start: start.clone().unwrap(),
+                    ends: ends
+                });
             },
             _ => { }  // No other nodes included in routing
         }

@@ -51,7 +51,7 @@ impl LabeledPoint {
 
 pub struct Wire {
     pub start: LabeledPoint,
-    pub end: LabeledPoint
+    pub ends: Vec<LabeledPoint>
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -151,6 +151,7 @@ impl Grid {
     }
 
     fn block_wire_area(&mut self, center_point: &LabeledPoint) {
+        // Add -3s around each wire core
         for delta in MANHATTEN_NEIGHBORHOOD {
             match self.to_grid_point(&LabeledPoint {
                 x: center_point.x + delta.x,
@@ -164,10 +165,11 @@ impl Grid {
                         self.grid[grid_point.x][grid_point.y][grid_point.z] = -3;
                     }
                 },
-                _ => {}
+                Err(_) => {}  // Ignore if we're outside the grid
             }
         }
 
+        // Mark wire center
         match self.to_grid_point(center_point) {
             Ok(grid_point) => {
                 let current_value =
@@ -176,7 +178,7 @@ impl Grid {
                     self.grid[grid_point.x][grid_point.y][grid_point.z] = -2;
                 }
             },
-            _ => {}
+            Err(_) => {}  // Ignore if we're outside the grid
         }
     }
 
@@ -251,7 +253,7 @@ pub fn write_mcfunction(
             let mut min = wires[0].start.to_point();
             let mut max = wires[0].start.to_point();
             for wire in wires {
-                for point in [&wire.start, &wire.end] {
+                for point in std::iter::once(&wire.start).chain(wire.ends.iter()) {
                     if point.x < min.x { min.x = point.x; }
                     if point.y < min.y { min.y = point.y; }
                     if point.z < min.z { min.z = point.z; }
@@ -288,17 +290,20 @@ pub fn write_mcfunction(
             for wire in wires {
                 let mut temp_grid: Grid = final_grid.clone();
 
-                let mut blocks_to_check: VecDeque<LabeledPoint> = VecDeque::new();
-                blocks_to_check.push_back(wire.start.clone()); // push the starting point to start there
+                let mut points_to_check: VecDeque<LabeledPoint> = VecDeque::new();
+                points_to_check.push_back(wire.start.clone()); // push the starting point to start there
 
-                println!("Wire: {}, {}, {} -> {}, {}, {}",
-                    wire.start.x, wire.start.y, wire.start.z,
-                    wire.end.x, wire.end.y, wire.end.z);
+                print!("Wire: {}, {}, {} -> ", wire.start.x, wire.start.y, wire.start.z);
+                for end in &wire.ends {
+                    print!("({}, {}, {}), ", end.x, end.y, end.z);
+                }
+                println!();
 
+                let mut ends_to_reach = wire.ends.clone();
                 let mut current_distance;
                 let mut at_start = true;
-                while blocks_to_check.len() > 0 {
-                    let current: LabeledPoint = blocks_to_check.pop_front().unwrap();
+                while points_to_check.len() > 0 {
+                    let current: LabeledPoint = points_to_check.pop_front().unwrap();
                     // println!("Getting @ {current:?}");
                     if at_start {
                         // Distance to start is 0 when at start
@@ -311,9 +316,16 @@ pub fn write_mcfunction(
                     }
                     // println!("Current dist: {current_distance}");
 
-                    // Stop searching if we've reached the target
-                    if current.compare(&wire.end) {
-                        break;
+                    match ends_to_reach.iter()
+                            .position(|end| current.compare(end)) {
+                        Some(idx) => {
+                            ends_to_reach.remove(idx);
+                            if ends_to_reach.len() == 0 {
+                                // Stop searching if we've reached all wire ends
+                                break;
+                            }
+                        },
+                        None => {}
                     }
 
                     // Add adjacent points to queue if they're empty
@@ -327,7 +339,7 @@ pub fn write_mcfunction(
                         if temp_grid.contains(&point) && temp_grid.get(&point) == 0 &&
                                 !point.compare(&wire.start) {
                             _ = temp_grid.set(&point, current_distance + 1);
-                            blocks_to_check.push_back(point);
+                            points_to_check.push_back(point);
                         }
                     }
                 }
@@ -336,42 +348,39 @@ pub fn write_mcfunction(
 
                 // Work backward from end point back to start &
                 // edit final_grid to set final wire positions
-                let mut current: LabeledPoint = wire.end.clone();
-                let mut current_value = temp_grid.get(&current);
-                println!("Backtracking from {}, {}, {}", current.x, current.y, current.z);
-                let mut wire_list: Vec<LabeledPoint> = Vec::new();
-                'backtrack_loop: while !current.compare(&wire.start) {
-                    wire_list.push(current.clone());
-                    println!("Current: {current:?} = {}", temp_grid.get(&current));
+                for end in &wire.ends {
+                    let mut current = end.clone();
+                    let mut current_value = temp_grid.get(&current);
+                    println!("Backtracking from {}, {}, {}", current.x, current.y, current.z);
+                    'backtrack_loop: while !current.compare(&wire.start) {
+                        final_grid.block_wire_area(&current);
+                        println!("Current: {current:?} = {}", temp_grid.get(&current));
 
-                    for delta in MANHATTEN_NEIGHBORHOOD {
-                        let neighbor = LabeledPoint {
-                            x: current.x + delta.x,
-                            y: current.y + delta.y,
-                            z: current.z + delta.z,
-                            label: None
-                        };
-                        let neighbor_value = temp_grid.get(&neighbor);
-                        println!("Checking {neighbor:?} = {neighbor_value}");
-                        if neighbor.compare(&wire.start) || (
-                            temp_grid.contains(&neighbor) && (
-                                0 < neighbor_value &&  // Don't go to gates/other wires
-                                (neighbor_value < current_value ||  // Follow gradient down...
-                                    current_value < 0)  // ...or get off a gate if we're sitting on one
-                            )
-                        ) {
-                            println!("Setting current");
-                            current = neighbor;
-                            current_value = temp_grid.get(&current);
-                            continue 'backtrack_loop;
+                        for delta in MANHATTEN_NEIGHBORHOOD {
+                            let neighbor = LabeledPoint {
+                                x: current.x + delta.x,
+                                y: current.y + delta.y,
+                                z: current.z + delta.z,
+                                label: None
+                            };
+                            let neighbor_value = temp_grid.get(&neighbor);
+                            println!("Checking {neighbor:?} = {neighbor_value}");
+                            if neighbor.compare(&wire.start) || (
+                                temp_grid.contains(&neighbor) && (
+                                    0 < neighbor_value &&  // Don't go to gates/other wires
+                                    (neighbor_value < current_value ||  // Follow gradient down...
+                                        current_value < 0)  // ...or get off a gate if we're sitting on one
+                                )
+                            ) {
+                                println!("Setting current");
+                                current = neighbor;
+                                current_value = temp_grid.get(&current);
+                                continue 'backtrack_loop;
+                            }
                         }
+
+                        return Err("Failed to backtrack in Lee routing")?;
                     }
-
-                    return Err("Failed to backtrack in Lee routing")?;
-                }
-
-                for p in wire_list {
-                    final_grid.block_wire_area(&p);
                 }
             }
 
@@ -391,22 +400,24 @@ pub fn write_mcfunction(
         },
         RoutingAlgo::Wireless => {
             for wire in wires {
-                let relative_start_x = wire.start.x - wire.end.x;
-                let relative_start_z = wire.start.z - wire.end.z;
+                for end in &wire.ends {
+                    let relative_start_x = wire.start.x - end.x;
+                    let relative_start_z = wire.start.z - end.z;
 
-                let on_command = format!("execute if block ~{relative_start_x} ~{} ~{relative_start_z} minecraft:redstone_lamp[lit=true] run setblock ~ ~1 ~ minecraft:redstone_block", 1 + wire.start.y - wire.end.y);
-                let off_command = format!("execute if block ~{relative_start_x} ~{} ~{relative_start_z} minecraft:redstone_lamp[lit=false] run setblock ~ ~2 ~ minecraft:target", 2 + wire.start.y - wire.end.y);
+                    let on_command = format!("execute if block ~{relative_start_x} ~{} ~{relative_start_z} minecraft:redstone_lamp[lit=true] run setblock ~ ~1 ~ minecraft:redstone_block", 1 + wire.start.y - end.y);
+                    let off_command = format!("execute if block ~{relative_start_x} ~{} ~{relative_start_z} minecraft:redstone_lamp[lit=false] run setblock ~ ~2 ~ minecraft:target", 2 + wire.start.y - end.y);
 
-                writeln!(file, "setblock ~{} ~{} ~{} minecraft:redstone_lamp", wire.start.x, wire.start.y - 1, wire.start.z).expect(file_error);
-                writeln!(file, "setblock ~{} ~{} ~{} minecraft:target", wire.end.x, wire.end.y - 1, wire.end.z).expect(file_error);
-                writeln!(file, "setblock ~{} ~{} ~{} minecraft:repeating_command_block{{auto: 1b, Command: \"{on_command}\"}}", wire.end.x, wire.end.y - 2, wire.end.z).expect(file_error);
-                writeln!(file, "setblock ~{} ~{} ~{} minecraft:repeating_command_block{{auto: 1b, Command: \"{off_command}\"}}", wire.end.x, wire.end.y - 3, wire.end.z).expect(file_error);
+                    writeln!(file, "setblock ~{} ~{} ~{} minecraft:redstone_lamp", wire.start.x, wire.start.y - 1, wire.start.z).expect(file_error);
+                    writeln!(file, "setblock ~{} ~{} ~{} minecraft:target", end.x, end.y - 1, end.z).expect(file_error);
+                    writeln!(file, "setblock ~{} ~{} ~{} minecraft:repeating_command_block{{auto: 1b, Command: \"{on_command}\"}}", end.x, end.y - 2, end.z).expect(file_error);
+                    writeln!(file, "setblock ~{} ~{} ~{} minecraft:repeating_command_block{{auto: 1b, Command: \"{off_command}\"}}", end.x, end.y - 3, end.z).expect(file_error);
 
-                if wire.start.label.is_some() {
-                    writeln!(file, "summon minecraft:armor_stand ~{} ~{} ~{} {{Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: \"{}\"}}", (wire.start.x as f32) + 0.5, wire.start.y + 1, (wire.start.z as f32) + 0.5, wire.start.label.as_ref().unwrap()).expect(file_error);
-                }
-                if wire.end.label.is_some() {
-                    writeln!(file, "summon minecraft:armor_stand ~{} ~{} ~{} {{Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: \"{}\"}}", (wire.end.x as f32) + 0.5, wire.end.y + 1, (wire.end.z as f32) + 0.5, wire.end.label.as_ref().unwrap()).expect(file_error);
+                    if wire.start.label.is_some() {
+                        writeln!(file, "summon minecraft:armor_stand ~{} ~{} ~{} {{Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: \"{}\"}}", (wire.start.x as f32) + 0.5, wire.start.y + 1, (wire.start.z as f32) + 0.5, wire.start.label.as_ref().unwrap()).expect(file_error);
+                    }
+                    if end.label.is_some() {
+                        writeln!(file, "summon minecraft:armor_stand ~{} ~{} ~{} {{Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: \"{}\"}}", (end.x as f32) + 0.5, end.y + 1, (end.z as f32) + 0.5, end.label.as_ref().unwrap()).expect(file_error);
+                    }
                 }
             }
         }

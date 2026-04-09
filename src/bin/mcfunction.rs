@@ -37,12 +37,14 @@ fn main() {
                 y: 0,
                 label: Some("start".to_string())
             },
-            end: mcfunction::LabeledPoint {
-                x: 0,
-                z: 7,
-                y: 0,
-                label: Some("end".to_string())
-            }
+            ends: vec![
+                mcfunction::LabeledPoint {
+                    x: 0,
+                    z: 7,
+                    y: 0,
+                    label: Some("end".to_string())
+                }
+            ]
         }
     ];
 
