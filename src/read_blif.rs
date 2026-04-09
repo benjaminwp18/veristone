@@ -68,7 +68,7 @@ struct Module {
 }
 
 #[allow(unused_variables)]
-pub fn read_blif(blif_path: &Path, placement_algo: PlacementAlgo) -> (Vec<mcfunction::Gate>, Vec<mcfunction::Wire>) {
+pub fn read_blif(blif_path: &Path, placement_algo: PlacementAlgo, connect_io: bool) -> (Vec<mcfunction::Gate>, Vec<mcfunction::Wire>) {
     let binding = path::absolute(blif_path).unwrap().into_os_string();
     let full_path = binding.to_str().unwrap();
 
@@ -111,7 +111,7 @@ pub fn read_blif(blif_path: &Path, placement_algo: PlacementAlgo) -> (Vec<mcfunc
     // Place gates & get wire target endpoints
     let gate_info = mcfunction::read_gate_info();
     let gates_map = place_gates(&graph, &gate_info, placement_algo);
-    let wires = get_wires(&graph, &gates_map, &gate_info);
+    let wires = get_wires(&graph, &gates_map, &gate_info, connect_io);
     let gates = gates_map.into_values().collect();
 
     return (gates, wires);
@@ -270,7 +270,8 @@ fn place_gates(
 fn get_wires(
     graph: &graph::Graph<Node, String, Directed>,
     gates: &HashMap<NodeIndex, mcfunction::Gate>,
-    gate_info: &HashMap<String, mcfunction::GateInfo>
+    gate_info: &HashMap<String, mcfunction::GateInfo>,
+    connect_io: bool
 ) -> Vec<mcfunction::Wire> {
     let mut wires: Vec<mcfunction::Wire> = vec![];
 
@@ -293,7 +294,9 @@ fn get_wires(
                         label: Some(format!("{} -> {}", edge.weight(), node_weight.name))
                     });
                 }
-                if start.is_none() {
+                if start.is_none() && connect_io {
+                    // Only set start for circuit inputs if we're connecting IO
+                    // Otherwise leave it as None for later
                     start = Some(mcfunction::LabeledPoint {
                         x: -2,
                         z: input_idx * 2,
@@ -316,13 +319,24 @@ fn get_wires(
                     });
                 }
                 if ends.len() == 0 {
-                    ends.push(mcfunction::LabeledPoint {
-                        x: -4,
-                        z: output_idx * 2,
-                        y: 0,
-                        label: Some(node_weight.name.clone())
-                    });
-                    output_idx += 1;
+                    if connect_io {
+                        ends.push(mcfunction::LabeledPoint {
+                            x: -4,
+                            z: output_idx * 2,
+                            y: 0,
+                            label: Some(node_weight.name.clone())
+                        });
+                        output_idx += 1;
+                    }
+                    else {
+                        // Ignore circuit output wires if we're not connecting IO
+                        continue;
+                    }
+                }
+                else if ends.len() >= 2 && start.is_none() {
+                    // If we're not connecting IO to a console, we should still connect
+                    //  the ends of multi-ended circuit input wires
+                    start = ends.pop();
                 }
 
                 wires.push(mcfunction::Wire {
