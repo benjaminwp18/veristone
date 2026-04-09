@@ -73,7 +73,7 @@ pub struct GateInfo {
 
 pub enum RoutingAlgo {
     Wireless,
-    Lee { y_padding: i32 }
+    Lee { padding: Point }
 }
 
 struct GridPoint {
@@ -248,7 +248,7 @@ pub fn write_mcfunction(
     }
 
     match routing_algo {
-        RoutingAlgo::Lee { y_padding } => {
+        RoutingAlgo::Lee { padding } => {
             // Find size of allowed volume for wires
             let mut min = wires[0].start.to_point();
             let mut max = wires[0].start.to_point();
@@ -262,7 +262,13 @@ pub fn write_mcfunction(
                     if point.z > max.z { max.z = point.z; }
                 }
             }
-            max.y += y_padding;
+            min.x -= padding.x;
+            // Skipping negative y padding for now
+            max.z -= padding.z;
+
+            max.x += padding.x;
+            max.y += padding.y;
+            max.z += padding.z;
 
             // Access to map containing info about all gate types
             let gate_info = read_gate_info();
