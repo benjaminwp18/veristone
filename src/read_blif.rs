@@ -100,13 +100,13 @@ pub fn read_blif(blif_path: &Path, placement_algo: PlacementAlgo, connect_io: bo
     add_module_to_graph(&first_module_name.unwrap(), &modules, &mut graph, &mut nets, net_aliases);
 
     // Draw circuit as SVG graph
-    println!("\n--- Writing graph to SVG ---");
+    /*println!("\n--- Writing graph to SVG ---");
     let graph_dot_str = Dot::new(&graph).to_string();
     println!("{graph_dot_str}");
     let format = graphviz_rust::cmd::Format::Svg;
     let graph_svg = graphviz_rust::exec_dot(graph_dot_str, vec![format.into()]).unwrap();
     let stem = blif_path.file_stem().unwrap().to_str().unwrap();
-    fs::write(format!("res/graphs/graph_{stem}.svg"), graph_svg).expect("Writing SVG to file:");
+    fs::write(format!("res/graphs/graph_{stem}.svg"), graph_svg).expect("Writing SVG to file:");*/
 
     // Place gates & get wire target endpoints
     let gate_info = mcfunction::read_gate_info();
