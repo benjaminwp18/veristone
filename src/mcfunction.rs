@@ -273,7 +273,7 @@ pub fn write_mcfunction(
             // Access to map containing info about all gate types
             let gate_info = read_gate_info();
 
-            let mut final_grid = Grid::new(&min, &max);
+            let mut initial_grid = Grid::new(&min, &max);
 
             // Mark all blocks occupied by gates
             for gate in gates {
@@ -282,7 +282,7 @@ pub fn write_mcfunction(
                 for x in 0..info.x_dim {
                     for y in 0..info.y_dim {
                         for z in 0..info.z_dim {
-                            _ = final_grid.set(&LabeledPoint {
+                            _ = initial_grid.set(&LabeledPoint {
                                 x: gate.x + x,
                                 y: gate.y + y,
                                 z: gate.z + z,
@@ -293,116 +293,28 @@ pub fn write_mcfunction(
                 }
             }
 
+            let mut final_grid = initial_grid.clone();
+
             for wire in wires {
-                let mut temp_grid: Grid = final_grid.clone();
-
-                let mut points_to_check: VecDeque<LabeledPoint> = VecDeque::new();
-                points_to_check.push_back(wire.start.clone()); // push the starting point to start there
-
-                print!("Wire: {}, {}, {} -> ", wire.start.x, wire.start.y, wire.start.z);
-                for end in &wire.ends {
-                    print!("({}, {}, {}), ", end.x, end.y, end.z);
-                }
-                println!();
-
-                let mut ends_to_reach = wire.ends.clone();
-                let mut current_distance;
-                let mut at_start = true;
-                while points_to_check.len() > 0 {
-                    let current: LabeledPoint = points_to_check.pop_front().unwrap();
-                    // println!("Getting @ {current:?}");
-                    if at_start {
-                        // Distance to start is 0 when at start
-                        // (even though start is on a gate, so its value is -1)
-                        current_distance = 0;
-                        at_start = false;
-                    }
-                    else {
-                        current_distance = temp_grid.get(&current);
-                    }
-                    // println!("Current dist: {current_distance}");
-
-                    match ends_to_reach.iter()
-                            .position(|end| current.compare(end)) {
-                        Some(idx) => {
-                            ends_to_reach.remove(idx);
-                            if ends_to_reach.len() == 0 {
-                                // Stop searching if we've reached all wire ends
-                                break;
-                            }
-                        },
-                        None => {}
-                    }
-
-                    // Add adjacent points to queue if they're empty
-                    for delta in MANHATTEN_NEIGHBORHOOD {
-                        let point = LabeledPoint {
-                            x: current.x + delta.x,
-                            y: current.y + delta.y,
-                            z: current.z + delta.z,
-                            label: None
-                        };
-                        if temp_grid.contains(&point) && temp_grid.get(&point) == 0 &&
-                                !point.compare(&wire.start) {
-                            _ = temp_grid.set(&point, current_distance + 1);
-                            points_to_check.push_back(point);
-                        }
-                    }
-                }
-
-                println!("{temp_grid}");
-
-                // Work backward from end point back to start &
-                // edit final_grid to set final wire positions
-                for end in &wire.ends {
-                    let mut current = end.clone();
-                    let mut current_value = temp_grid.get(&current);
-                    println!("Backtracking from {}, {}, {}", current.x, current.y, current.z);
-                    'backtrack_loop: while !current.compare(&wire.start) {
-                        final_grid.block_wire_area(&current);
-                        println!("Current: {current:?} = {}", temp_grid.get(&current));
-
-                        for delta in MANHATTEN_NEIGHBORHOOD {
-                            let neighbor = LabeledPoint {
-                                x: current.x + delta.x,
-                                y: current.y + delta.y,
-                                z: current.z + delta.z,
-                                label: None
-                            };
-                            let neighbor_value = temp_grid.get(&neighbor);
-                            println!("Checking {neighbor:?} = {neighbor_value}");
-                            if neighbor.compare(&wire.start) || (
-                                temp_grid.contains(&neighbor) && (
-                                    0 < neighbor_value &&  // Don't go to gates/other wires
-                                    (neighbor_value < current_value ||  // Follow gradient down...
-                                        current_value < 0)  // ...or get off a gate if we're sitting on one
-                                )
-                            ) {
-                                println!("Setting current");
-                                current = neighbor;
-                                current_value = temp_grid.get(&current);
-                                continue 'backtrack_loop;
-                            }
-                        }
-
-                        return Err("Failed to backtrack in Lee routing")?;
-                    }
+                let wire_points = route_wire(&initial_grid, wire)?;
+                for point in wire_points {
+                    
                 }
             }
 
             // Translate wires to Minecraft blocks
-            for x in 0..final_grid.grid.len() {
-                for y in 0..final_grid.grid[0].len() {
-                    for z in 0..final_grid.grid[0][0].len() {
-                        if final_grid.grid[x][y][z] == -2 {
-                            writeln!(file, "setblock ~{} ~{} ~{} minecraft:pink_wool",
-                                x, y - 1, z).expect(file_error);
-                            writeln!(file, "setblock ~{} ~{} ~{} minecraft:redstone_wire",
-                                x, y, z).expect(file_error);
-                        }
-                    }
-                }
-            }
+            // for x in 0..initial_grid.grid.len() {
+            //     for y in 0..initial_grid.grid[0].len() {
+            //         for z in 0..initial_grid.grid[0][0].len() {
+            //             if initial_grid.grid[x][y][z] == -2 {
+            //                 writeln!(file, "setblock ~{} ~{} ~{} minecraft:pink_wool",
+            //                     x, y - 1, z).expect(file_error);
+            //                 writeln!(file, "setblock ~{} ~{} ~{} minecraft:redstone_wire",
+            //                     x, y, z).expect(file_error);
+            //             }
+            //         }
+            //     }
+            // }
         },
         RoutingAlgo::Wireless => {
             for wire in wires {
@@ -432,4 +344,105 @@ pub fn write_mcfunction(
     println!("Successfully wrote mcfunction to {MCFUNCTION_PATH}");
 
     Ok(())
+}
+
+fn route_wire(initial_grid: &Grid, wire: &Wire) -> Result<Vec<Point>, Box<dyn std::error::Error>> {
+    let mut temp_grid: Grid = initial_grid.clone();
+
+    let mut points_to_check: VecDeque<LabeledPoint> = VecDeque::new();
+    points_to_check.push_back(wire.start.clone()); // push the starting point to start there
+
+    print!("Wire: {}, {}, {} -> ", wire.start.x, wire.start.y, wire.start.z);
+    for end in &wire.ends {
+        print!("({}, {}, {}), ", end.x, end.y, end.z);
+    }
+    println!();
+
+    let mut ends_to_reach = wire.ends.clone();
+    let mut current_distance;
+    let mut at_start = true;
+    while points_to_check.len() > 0 {
+        let current: LabeledPoint = points_to_check.pop_front().unwrap();
+        // println!("Getting @ {current:?}");
+        if at_start {
+            // Distance to start is 0 when at start
+            // (even though start is on a gate, so its value is -1)
+            current_distance = 0;
+            at_start = false;
+        }
+        else {
+            current_distance = temp_grid.get(&current);
+        }
+        // println!("Current dist: {current_distance}");
+
+        match ends_to_reach.iter()
+                .position(|end| current.compare(end)) {
+            Some(idx) => {
+                ends_to_reach.remove(idx);
+                if ends_to_reach.len() == 0 {
+                    // Stop searching if we've reached all wire ends
+                    break;
+                }
+            },
+            None => {}
+        }
+
+        // Add adjacent points to queue if they're empty
+        for delta in MANHATTEN_NEIGHBORHOOD {
+            let point = LabeledPoint {
+                x: current.x + delta.x,
+                y: current.y + delta.y,
+                z: current.z + delta.z,
+                label: None
+            };
+            if temp_grid.contains(&point) && temp_grid.get(&point) == 0 &&
+                    !point.compare(&wire.start) {
+                _ = temp_grid.set(&point, current_distance + 1);
+                points_to_check.push_back(point);
+            }
+        }
+    }
+
+    println!("{temp_grid}");
+
+    let mut wire_points: Vec<Point> = vec![];
+
+    // Work backward from end point back to start &
+    // edit final_grid to set final wire positions
+    for end in &wire.ends {
+        let mut current = end.clone();
+        let mut current_value = temp_grid.get(&current);
+        println!("Backtracking from {}, {}, {}", current.x, current.y, current.z);
+        'backtrack_loop: while !current.compare(&wire.start) {
+            wire_points.push(current.to_point());
+            println!("Current: {current:?} = {}", temp_grid.get(&current));
+
+            for delta in MANHATTEN_NEIGHBORHOOD {
+                let neighbor = LabeledPoint {
+                    x: current.x + delta.x,
+                    y: current.y + delta.y,
+                    z: current.z + delta.z,
+                    label: None
+                };
+                let neighbor_value = temp_grid.get(&neighbor);
+                println!("Checking {neighbor:?} = {neighbor_value}");
+                if neighbor.compare(&wire.start) || (
+                    temp_grid.contains(&neighbor) && (
+                        0 < neighbor_value &&  // Don't go to gates/other wires
+                        (neighbor_value < current_value ||  // Follow gradient down...
+                            current_value < 0)  // ...or get off a gate if we're sitting on one
+                    )
+                ) {
+                    println!("Setting current");
+                    current = neighbor;
+                    current_value = temp_grid.get(&current);
+                    continue 'backtrack_loop;
+                }
+            }
+
+            return Err("Failed to backtrack in Lee routing")?;
+        }
+    }
+
+    return Ok(wire_points);
 }
