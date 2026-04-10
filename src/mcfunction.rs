@@ -182,19 +182,10 @@ impl Grid {
         }
     }
 
-    fn get(&self, point: &LabeledPoint) -> i32 {
-        let x: usize = (point.x - self.min.x) as usize;
-        let y: usize = (point.y - self.min.y) as usize;
-        let z: usize = (point.z - self.min.z) as usize;
-
-        if x >= self.x_size || y >= self.y_size || z >= self.z_size {
-            //println!("{}, {}, {}", x, y, z);
-            // TODO: should probably error instead of returning a magic value
-            return -4;
-        }
-
-        //println!("{}, {}, {}", self.x_size, self.y_size, self.z_size);
-        self.grid[x][y][z]
+    fn get(&self, point: &LabeledPoint) 
+            -> Result<i32, Box<dyn std::error::Error>> {
+        let grid_point = self.to_grid_point(point)?;
+        Ok(self.grid[grid_point.x][grid_point.y][grid_point.z])
     }
 }
 
