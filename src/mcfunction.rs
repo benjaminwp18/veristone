@@ -182,7 +182,7 @@ impl Grid {
         }
     }
 
-    fn get(&self, point: &LabeledPoint) 
+    fn get(&self, point: &LabeledPoint)
             -> Result<i32, Box<dyn std::error::Error>> {
         let grid_point = self.to_grid_point(point)?;
         Ok(self.grid[grid_point.x][grid_point.y][grid_point.z])
@@ -362,7 +362,7 @@ fn route_wire(initial_grid: &Grid, wire: &Wire) -> Result<Vec<Point>, Box<dyn st
             at_start = false;
         }
         else {
-            current_distance = temp_grid.get(&current);
+            current_distance = temp_grid.get(&current)?;
         }
         // println!("Current dist: {current_distance}");
 
@@ -386,7 +386,7 @@ fn route_wire(initial_grid: &Grid, wire: &Wire) -> Result<Vec<Point>, Box<dyn st
                 z: current.z + delta.z,
                 label: None
             };
-            if temp_grid.contains(&point) && temp_grid.get(&point) == 0 &&
+            if temp_grid.get(&point).is_ok_and(|x| x == 0) &&
                     !point.compare(&wire.start) {
                 _ = temp_grid.set(&point, current_distance + 1);
                 points_to_check.push_back(point);
@@ -402,11 +402,11 @@ fn route_wire(initial_grid: &Grid, wire: &Wire) -> Result<Vec<Point>, Box<dyn st
     // edit final_grid to set final wire positions
     for end in &wire.ends {
         let mut current = end.clone();
-        let mut current_value = temp_grid.get(&current);
+        let mut current_value = temp_grid.get(&current)?;
         println!("Backtracking from {}, {}, {}", current.x, current.y, current.z);
         'backtrack_loop: while !current.compare(&wire.start) {
             wire_points.push(current.to_point());
-            println!("Current: {current:?} = {}", temp_grid.get(&current));
+            println!("Current: {current:?} = {current_value}");
 
             for delta in MANHATTEN_NEIGHBORHOOD {
                 let neighbor = LabeledPoint {
@@ -415,18 +415,16 @@ fn route_wire(initial_grid: &Grid, wire: &Wire) -> Result<Vec<Point>, Box<dyn st
                     z: current.z + delta.z,
                     label: None
                 };
-                let neighbor_value = temp_grid.get(&neighbor);
-                println!("Checking {neighbor:?} = {neighbor_value}");
-                if neighbor.compare(&wire.start) || (
-                    temp_grid.contains(&neighbor) && (
+                if neighbor.compare(&wire.start) ||
+                    temp_grid.get(&neighbor).is_ok_and(|neighbor_value|
                         0 < neighbor_value &&  // Don't go to gates/other wires
                         (neighbor_value < current_value ||  // Follow gradient down...
                             current_value < 0)  // ...or get off a gate if we're sitting on one
                     )
-                ) {
+                {
                     println!("Setting current");
                     current = neighbor;
-                    current_value = temp_grid.get(&current);
+                    current_value = temp_grid.get(&current)?;
                     continue 'backtrack_loop;
                 }
             }
