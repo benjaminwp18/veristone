@@ -3,7 +3,8 @@ use std::fs::File;
 use serde_json;
 use std::collections::{
     HashMap,
-    VecDeque
+    VecDeque,
+    BinaryHeap
 };
 use std::fs;
 use serde::Deserialize;
@@ -22,6 +23,13 @@ const MANHATTEN_NEIGHBORHOOD: &[LabeledPoint; 6] = &[
 
 pub struct Gate {
     pub name: String,
+    pub x: i32,
+    pub z: i32,
+    pub y: i32
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct Point {
     pub x: i32,
     pub z: i32,
     pub y: i32
@@ -54,11 +62,22 @@ pub struct Wire {
     pub ends: Vec<LabeledPoint>
 }
 
-#[derive(Debug, Deserialize, Clone)]
-pub struct Point {
-    pub x: i32,
-    pub z: i32,
-    pub y: i32
+#[derive(Copy, Clone, Eq, PartialEq)]
+struct RouteCost {
+    route_idx: usize,
+    intersections: usize
+}
+
+impl Ord for RouteCost {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.intersections.cmp(&other.intersections)
+    }
+}
+
+impl PartialOrd for RouteCost {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -96,9 +115,17 @@ struct Grid {
      *  -1 = gate in this location
      *  -2 = wire in this location
      *  -3 = borders a wire
+     *
+     * NEW:
+     *  -2 borders a wire
+     *  <-2 wire, marked by # wires/wire bordering cells at this location
      */
     grid: Vec<Vec<Vec<i32>>>
 }
+
+static GRID_EMPTY: i32 = 0;
+static GRID_GATE: i32 = -1;
+static GRID_WIRE_BORDER: i32 = -2;
 
 impl Grid {
     fn new(min: &Point, max: &Point) -> Grid {
@@ -225,7 +252,7 @@ pub fn read_gate_info() -> HashMap<String, GateInfo> {
 pub fn write_mcfunction(
     gates: &Vec<Gate>,
     wires: &Vec<Wire>,
-    routing_algo :RoutingAlgo
+    routing_algo: RoutingAlgo
 ) -> Result<(), Box<dyn std::error::Error>> {
     let path: &Path = Path::new(MCFUNCTION_PATH);
     let mut file = File::create(path).unwrap();
@@ -278,19 +305,30 @@ pub fn write_mcfunction(
                                 y: gate.y + y,
                                 z: gate.z + z,
                                 label: None
-                            }, -1);
+                            }, GRID_GATE);
                         }
                     }
                 }
             }
 
-            let mut final_grid = initial_grid.clone();
+            let mut routes: Vec<Vec<Point>> = vec![];
+            let mut route_costs: BinaryHeap<RouteCost> = BinaryHeap::new();
 
             for wire in wires {
-                let wire_points = route_wire(&initial_grid, wire)?;
-                for point in wire_points {
-                    
-                }
+                routes.push(route_wire(&initial_grid, wire)?);
+            }
+
+            let mut final_grid = initial_grid.clone();
+
+            // add all wires to grid
+            // TODO: change grid numbering
+
+            while route_costs.peek().is_some_and(|c| c.intersections > 0) {
+                // find N (random) highest intersection wires
+                // remove high inters. wires from grid & route costs
+                // reroute high inters. wires
+                // add high inters. wires to grid & route costs again
+                // update high inters. wires in routes
             }
 
             // Translate wires to Minecraft blocks
