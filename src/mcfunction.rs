@@ -35,6 +35,17 @@ pub struct Point {
     pub y: i32
 }
 
+impl Point {
+    fn to_labeled_point(&self) -> LabeledPoint {
+        LabeledPoint {
+            x: self.x,
+            y: self.y,
+            z: self.z,
+            label: None
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct LabeledPoint {
     pub x: i32,
@@ -126,6 +137,15 @@ struct Grid {
 static GRID_EMPTY: i32 = 0;
 static GRID_GATE: i32 = -1;
 static GRID_WIRE_BORDER: i32 = -2;
+static GRID_BASE_WIRE: i32 = -3;
+
+fn is_blocked(grid_value: i32) -> bool {
+    grid_value < GRID_EMPTY
+}
+
+fn is_lee_floodfill(grid_value: i32) -> bool {
+    grid_value > GRID_EMPTY
+}
 
 impl Grid {
     fn new(min: &Point, max: &Point) -> Grid {
@@ -188,8 +208,8 @@ impl Grid {
             }) {
                 Ok(grid_point) => {
                     // Don't overwrite other gates/wire centers
-                    if self.grid[grid_point.x][grid_point.y][grid_point.z] >= 0 {
-                        self.grid[grid_point.x][grid_point.y][grid_point.z] = -3;
+                    if !is_blocked(self.grid[grid_point.x][grid_point.y][grid_point.z]) {
+                        self.grid[grid_point.x][grid_point.y][grid_point.z] = GRID_WIRE_BORDER;
                     }
                 },
                 Err(_) => {}  // Ignore if we're outside the grid
@@ -201,8 +221,8 @@ impl Grid {
             Ok(grid_point) => {
                 let current_value =
                     self.grid[grid_point.x][grid_point.y][grid_point.z];
-                if current_value >= 0 || current_value == -3 {
-                    self.grid[grid_point.x][grid_point.y][grid_point.z] = -2;
+                if !is_blocked(current_value) || current_value == GRID_WIRE_BORDER {
+                    self.grid[grid_point.x][grid_point.y][grid_point.z] = GRID_BASE_WIRE;
                 }
             },
             Err(_) => {}  // Ignore if we're outside the grid
@@ -316,6 +336,9 @@ pub fn write_mcfunction(
 
             for wire in wires {
                 routes.push(route_wire(&initial_grid, wire)?);
+                // for point in routes.last().unwrap() {
+                //     initial_grid.block_wire_area(&point.to_labeled_point());
+                // }
             }
 
             let mut final_grid = initial_grid.clone();
@@ -424,7 +447,7 @@ fn route_wire(initial_grid: &Grid, wire: &Wire) -> Result<Vec<Point>, Box<dyn st
                 z: current.z + delta.z,
                 label: None
             };
-            if temp_grid.get(&point).is_ok_and(|x| x == 0) &&
+            if temp_grid.get(&point).is_ok_and(|x| x == GRID_EMPTY) &&
                     !point.compare(&wire.start) {
                 _ = temp_grid.set(&point, current_distance + 1);
                 points_to_check.push_back(point);
@@ -455,9 +478,9 @@ fn route_wire(initial_grid: &Grid, wire: &Wire) -> Result<Vec<Point>, Box<dyn st
                 };
                 if neighbor.compare(&wire.start) ||
                     temp_grid.get(&neighbor).is_ok_and(|neighbor_value|
-                        0 < neighbor_value &&  // Don't go to gates/other wires
+                        is_lee_floodfill(neighbor_value) &&  // Don't go to gates/other wires
                         (neighbor_value < current_value ||  // Follow gradient down...
-                            current_value < 0)  // ...or get off a gate if we're sitting on one
+                         is_blocked(current_value))  // ...or get off a gate if we're sitting on one
                     )
                 {
                     println!("Setting current");

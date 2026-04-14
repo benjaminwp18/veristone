@@ -1,10 +1,9 @@
 use std::{
-    collections::HashMap, fmt::{Display, Formatter, Result}, fs,
+    collections::HashMap, fmt::{Display, Formatter, Result},
     path::{self, Path}
 };
 use blif_parser::*;
 use petgraph::{Directed, graph::{self, NodeIndex}, visit::EdgeRef};
-use petgraph::dot::Dot;
 use primitives::ParsedPrimitive;
 
 use crate::mcfunction;
@@ -68,7 +67,8 @@ struct Module {
 }
 
 #[allow(unused_variables)]
-pub fn read_blif(blif_path: &Path, placement_algo: PlacementAlgo, connect_io: bool) -> (Vec<mcfunction::Gate>, Vec<mcfunction::Wire>) {
+pub fn read_blif(blif_path: &Path, placement_algo: PlacementAlgo, connect_io: bool)
+        -> (Vec<mcfunction::Gate>, Vec<mcfunction::Wire>) {
     let binding = path::absolute(blif_path).unwrap().into_os_string();
     let full_path = binding.to_str().unwrap();
 
