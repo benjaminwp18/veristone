@@ -464,11 +464,12 @@ pub fn write_mcfunction(
                                 label: None
                             };
 
-                            if initial_grid.get(point).unwrap() != GRID_EMPTY {
+                            // Ignore gate points outside of grid (i.e. gates that are taller than the highest pin y)
+                            if initial_grid.get(point).is_ok_and(|v| v != GRID_EMPTY) {
                                 return Err(format!("{} gate overlaps a pin skirt @ {point:?}", gate.name))?;
                             }
 
-                            initial_grid.set(point, GRID_GATE).unwrap();
+                            _ = initial_grid.set(point, GRID_GATE);
                         }
                     }
                 }
