@@ -21,6 +21,9 @@ fn main() {
     let (gates, wires) = read_blif::read_blif(blif_path, read_blif::PlacementAlgo::DumbGrid { num_cols: 4 }, false);
     mcfunction::write_mcfunction(
         &gates, &wires,
-        mcfunction::RoutingAlgo::Lee { padding: mcfunction::Point { x: 3, y: 5, z: 3 } }
+        mcfunction::RoutingAlgo::Lee {
+            padding: mcfunction::Point { x: 3, y: 1, z: 3 },
+            do_rerouting: false
+        }
     ).unwrap();
 }
