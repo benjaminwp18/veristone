@@ -21,6 +21,25 @@ const MANHATTEN_NEIGHBORHOOD: &[LabeledPoint; 6] = &[
     LabeledPoint { x:  0, y:  0, z: -1, label: None }
 ];
 
+const REDSTONE_NEIGHBORHOOD: &[LabeledPoint; 14] = &[
+    LabeledPoint { x:  1, y:  0, z:  0, label: None },
+    LabeledPoint { x: -1, y:  0, z:  0, label: None },
+    LabeledPoint { x:  1, y:  1, z:  0, label: None },
+    LabeledPoint { x: -1, y:  1, z:  0, label: None },
+    LabeledPoint { x:  1, y:  -1, z:  0, label: None },
+    LabeledPoint { x: -1, y:  -1, z:  0, label: None },
+
+    LabeledPoint { x:  0, y:  1, z:  0, label: None },
+    LabeledPoint { x:  0, y: -1, z:  0, label: None },
+
+    LabeledPoint { x:  0, y:  0, z:  1, label: None },
+    LabeledPoint { x:  0, y:  0, z: -1, label: None },
+    LabeledPoint { x:  0, y:  1, z:  1, label: None },
+    LabeledPoint { x:  0, y:  1, z: -1, label: None },
+    LabeledPoint { x:  0, y:  -1, z:  1, label: None },
+    LabeledPoint { x:  0, y:  -1, z: -1, label: None }
+];
+
 pub struct Gate {
     pub name: String,
     pub x: i32,
@@ -136,11 +155,12 @@ struct Grid {
     z_size: usize,
     /*
      * grid values defined as follows:
-     *  0 = empty and unchecked
-     *  >0 = checked, marked by distance from starting point
-     *  -1 = gate in this location
-     *  -2 borders a wire
-     *  <=-3 wire, marked by # wires/wire bordering cells at this location
+     *   0   empty and unchecked
+     *  >0   checked, marked by distance from starting point
+     *  -1   gate in this location
+     *  -2   pin skirt, no wires in this area unless they're connecting to the pin
+     *  -3   borders a wire
+     *  <=-4 wire, marked by # wires/wire bordering cells at this location
      */
     grid: Vec<Vec<Vec<i32>>>
 }
@@ -151,8 +171,9 @@ static GRID_INTERSECTION_COST: i32 = 2;
 
 static GRID_EMPTY: i32 = 0;
 static GRID_GATE: i32 = -1;
-static GRID_WIRE_BORDER: i32 = -2;
-static GRID_BASE_WIRE: i32 = -3;
+static GRID_PIN_SKIRT: i32 = -2;
+static GRID_WIRE_BORDER: i32 = -3;
+static GRID_BASE_WIRE: i32 = -4;
 
 fn grid_is_blocked(grid_value: i32) -> bool {
     grid_value < GRID_EMPTY
@@ -164,7 +185,7 @@ fn grid_is_wire(grid_value: i32) -> bool {
 
 fn grid_num_intersections(grid_value: i32) -> i32 {
     if grid_is_wire(grid_value) {
-        -(grid_value - GRID_WIRE_BORDER)
+        -(grid_value - GRID_BASE_WIRE) + 1
     }
     else {
         0
@@ -231,6 +252,51 @@ impl Grid {
         Ok(self.grid[grid_point.x][grid_point.y][grid_point.z])
     }
 
+    fn modify_skirt(&mut self, pin: &LabeledPoint, value_to_replace: i32, value_to_write: i32) {
+        for delta1 in MANHATTEN_NEIGHBORHOOD {
+            let neighbor = LabeledPoint {
+                x: pin.x + delta1.x,
+                y: pin.y + delta1.y,
+                z: pin.z + delta1.z,
+                label: None
+            };
+            match self.get(&neighbor) {
+                Ok(neighbor_value) => {
+                    if neighbor_value == value_to_replace {
+                        self.set(&neighbor, value_to_write).unwrap();
+                    }
+
+                    for delta2 in MANHATTEN_NEIGHBORHOOD {
+                        let grandneighbor = LabeledPoint {
+                            x: neighbor.x + delta2.x,
+                            y: neighbor.y + delta2.y,
+                            z: neighbor.z + delta2.z,
+                            label: None
+                        };
+
+                        match self.get(&grandneighbor) {
+                            Ok(grandneighbor_value) => {
+                                if grandneighbor_value == value_to_replace {
+                                    self.set(&grandneighbor, value_to_write).unwrap();
+                                }
+                            },
+                            Err(_) => {}
+                        }
+                    }
+                },
+                Err(_) => {}
+            }
+        }
+    }
+
+    fn add_pin_skirt(&mut self, pin: &LabeledPoint) {
+        self.modify_skirt(pin, GRID_EMPTY, GRID_PIN_SKIRT);
+    }
+
+    fn remove_pin_skirt(&mut self, pin: &LabeledPoint) {
+        self.modify_skirt(pin, GRID_PIN_SKIRT, GRID_EMPTY);
+    }
+
     fn add_route(&mut self, route: &Route) -> i32 {
         let mut cost = 0;
 
@@ -273,7 +339,7 @@ impl Grid {
                 self.set(&point.to_labeled_point(), GRID_BASE_WIRE).unwrap();
             }
 
-            for delta in MANHATTEN_NEIGHBORHOOD {
+            for delta in REDSTONE_NEIGHBORHOOD {
                 let neighbor = LabeledPoint { x: point.x + delta.x, y: point.y + delta.y, z: point.z + delta.z, label: None };
                 match self.get(&neighbor) {
                     Ok(neighbor_value) => {
@@ -410,16 +476,29 @@ pub fn write_mcfunction(
                 for x in 0..info.x_dim {
                     for y in 0..info.y_dim {
                         for z in 0..info.z_dim {
-                            initial_grid.set(&LabeledPoint {
+                            let point = &LabeledPoint {
                                 x: gate.x + x,
                                 y: gate.y + y,
                                 z: gate.z + z,
                                 label: None
-                            }, GRID_GATE).unwrap();
+                            };
+
+                            // Ignore gate points outside of grid (i.e. gates that are taller than the highest pin y)
+                            if initial_grid.get(point).is_ok_and(|v| v != GRID_EMPTY) {
+                                return Err(format!("{} gate overlaps a pin skirt @ {point:?}", gate.name))?;
+                            }
+
+                            _ = initial_grid.set(point, GRID_GATE);
                         }
                     }
                 }
+
+                for pin in info.inputs.values().chain(info.outputs.values()) {
+                    initial_grid.add_pin_skirt(&LabeledPoint { x: gate.x + pin.x, y: gate.y + pin.y, z: gate.z + pin.z, label: None });
+                }
             }
+
+            println!("{initial_grid}");
 
             let mut routes: Vec<Route> = vec![];
             let mut final_grid = initial_grid.clone();
@@ -452,8 +531,14 @@ pub fn write_mcfunction(
                 // Feed final_grid into route_wire to do a first pass w/o intersections
                 // Without rerouting, impossible routes will kill routing
                 for wire in wires {
+                    for pin in std::iter::once(&wire.start).chain(wire.ends.iter()) {
+                        final_grid.remove_pin_skirt(pin);
+                    }
                     routes.push(route_wire(&final_grid, wire)?);
                     final_grid.add_route(routes.last().unwrap());
+                    for pin in std::iter::once(&wire.start).chain(wire.ends.iter()) {
+                        final_grid.add_pin_skirt(pin);
+                    }
                 }
             }
 

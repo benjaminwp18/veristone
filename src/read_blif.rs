@@ -223,7 +223,7 @@ fn place_gates(
 
     match placement_algo {
         PlacementAlgo::DumbGrid { num_cols } => {
-            const CELL_PADDING: i32 = 1;
+            const CELL_PADDING: i32 = 4;
             let mut cell_size = 0;
             for (_, gate_info) in gate_info {
                 if gate_info.z_dim > cell_size {
