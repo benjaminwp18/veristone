@@ -474,9 +474,11 @@ pub fn write_mcfunction(
                 }
 
                 for pin in info.inputs.values().chain(info.outputs.values()) {
-                    initial_grid.add_pin_skirt(&pin.to_labeled_point());
+                    initial_grid.add_pin_skirt(&LabeledPoint { x: gate.x + pin.x, y: gate.y + pin.y, z: gate.z + pin.z, label: None });
                 }
             }
+
+            println!("{initial_grid}");
 
             let mut routes: Vec<Route> = vec![];
             let mut final_grid = initial_grid.clone();
