@@ -21,6 +21,25 @@ const MANHATTEN_NEIGHBORHOOD: &[LabeledPoint; 6] = &[
     LabeledPoint { x:  0, y:  0, z: -1, label: None }
 ];
 
+const REDSTONE_NEIGHBORHOOD: &[LabeledPoint; 14] = &[
+    LabeledPoint { x:  1, y:  0, z:  0, label: None },
+    LabeledPoint { x: -1, y:  0, z:  0, label: None },
+    LabeledPoint { x:  1, y:  1, z:  0, label: None },
+    LabeledPoint { x: -1, y:  1, z:  0, label: None },
+    LabeledPoint { x:  1, y:  -1, z:  0, label: None },
+    LabeledPoint { x: -1, y:  -1, z:  0, label: None },
+
+    LabeledPoint { x:  0, y:  1, z:  0, label: None },
+    LabeledPoint { x:  0, y: -1, z:  0, label: None },
+
+    LabeledPoint { x:  0, y:  0, z:  1, label: None },
+    LabeledPoint { x:  0, y:  0, z: -1, label: None },
+    LabeledPoint { x:  0, y:  1, z:  1, label: None },
+    LabeledPoint { x:  0, y:  1, z: -1, label: None },
+    LabeledPoint { x:  0, y:  -1, z:  1, label: None },
+    LabeledPoint { x:  0, y:  -1, z: -1, label: None }
+];
+
 pub struct Gate {
     pub name: String,
     pub x: i32,
@@ -320,7 +339,7 @@ impl Grid {
                 self.set(&point.to_labeled_point(), GRID_BASE_WIRE).unwrap();
             }
 
-            for delta in MANHATTEN_NEIGHBORHOOD {
+            for delta in REDSTONE_NEIGHBORHOOD {
                 let neighbor = LabeledPoint { x: point.x + delta.x, y: point.y + delta.y, z: point.z + delta.z, label: None };
                 match self.get(&neighbor) {
                     Ok(neighbor_value) => {

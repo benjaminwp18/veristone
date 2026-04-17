@@ -22,7 +22,7 @@ fn main() {
     mcfunction::write_mcfunction(
         &gates, &wires,
         mcfunction::RoutingAlgo::Lee {
-            padding: mcfunction::Point { x: 3, y: 1, z: 3 },
+            padding: mcfunction::Point { x: 3, y: 5, z: 3 },
             do_rerouting: false
         }
     ).unwrap();
