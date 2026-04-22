@@ -116,12 +116,8 @@ impl Grid {
 
     fn modify_skirt(&mut self, pin: &points::LabeledPoint, value_to_replace: i32, value_to_write: i32) {
         for delta1 in points::REDSTONE_NEIGHBORHOOD {
-            let neighbor = points::LabeledPoint {
-                x: pin.x + delta1.x,
-                y: pin.y + delta1.y,
-                z: pin.z + delta1.z,
-                label: None
-            };
+            let neighbor = pin + delta1;
+
             match self.get(&neighbor) {
                 Ok(neighbor_value) => {
                     if neighbor_value == value_to_replace {
@@ -129,12 +125,7 @@ impl Grid {
                     }
 
                     for delta2 in points::REDSTONE_NEIGHBORHOOD {
-                        let grandneighbor = points::LabeledPoint {
-                            x: neighbor.x + delta2.x,
-                            y: neighbor.y + delta2.y,
-                            z: neighbor.z + delta2.z,
-                            label: None
-                        };
+                        let grandneighbor = &neighbor + delta2;
 
                         match self.get(&grandneighbor) {
                             Ok(grandneighbor_value) => {
@@ -174,7 +165,7 @@ impl Grid {
             }
 
             for delta in points::MANHATTEN_NEIGHBORHOOD {
-                let neighbor = points::LabeledPoint { x: point.x + delta.x, y: point.y + delta.y, z: point.z + delta.z, label: None };
+                let neighbor = delta + point;
                 match self.get(&neighbor) {
                     Ok(neighbor_value) => {
                         if neighbor_value == cell::GATE {
@@ -202,7 +193,7 @@ impl Grid {
             }
 
             for delta in points::REDSTONE_NEIGHBORHOOD {
-                let neighbor = points::LabeledPoint { x: point.x + delta.x, y: point.y + delta.y, z: point.z + delta.z, label: None };
+                let neighbor = delta + point;
                 match self.get(&neighbor) {
                     Ok(neighbor_value) => {
                         if cell::is_wire(neighbor_value) {
@@ -234,12 +225,12 @@ impl Grid {
             }
 
             // Remove adjacency markers if they don't have their own wire neighbors
-            for delta in points::MANHATTEN_NEIGHBORHOOD {
-                let neighbor = points::LabeledPoint { x: point.x + delta.x, y: point.y + delta.y, z: point.z + delta.z, label: None };
+            for delta1 in points::MANHATTEN_NEIGHBORHOOD {
+                let neighbor = delta1 + point;
                 if self.get(&neighbor).is_ok_and(|v| v == cell::WIRE_BORDER) {
                     let mut found_other_wire = false;
-                    for delta in points::MANHATTEN_NEIGHBORHOOD {
-                        let grandneighbor = points::LabeledPoint { x: point.x + delta.x, y: point.y + delta.y, z: point.z + delta.z, label: None };
+                    for delta2 in points::MANHATTEN_NEIGHBORHOOD {
+                        let grandneighbor = delta2 + &neighbor;
                         if self.get(&grandneighbor).is_ok_and(cell::is_wire) {
                             found_other_wire = true;
                             break;

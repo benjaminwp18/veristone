@@ -1,3 +1,5 @@
+use std::ops;
+
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::fs;
@@ -64,6 +66,10 @@ impl PartialEq for LabeledPoint {
 }
 
 impl LabeledPoint {
+    pub fn no_label(x: i32, y: i32, z: i32) -> LabeledPoint {
+        return LabeledPoint { x: x, y: y, z: z, label: None };
+    }
+
     pub fn compare(&self, point: &LabeledPoint) -> bool {
         self.x == point.x && self.y == point.y && self.z == point.z
     }
@@ -80,6 +86,40 @@ impl LabeledPoint {
         }
     }
 }
+
+impl_op_ex!(+ |a: &Point, b: &Point| -> Point {
+    Point {
+        x: a.x + b.x,
+        y: a.y + b.y,
+        z: a.z + b.z
+    }
+});
+
+impl_op_ex!(+ |a: &Point, b: &LabeledPoint| -> Point {
+    Point {
+        x: a.x + b.x,
+        y: a.y + b.y,
+        z: a.z + b.z
+    }
+});
+
+impl_op_ex!(+ |a: &LabeledPoint, b: &LabeledPoint| -> LabeledPoint {
+    LabeledPoint {
+        x: a.x + b.x,
+        y: a.y + b.y,
+        z: a.z + b.z,
+        label: None
+    }
+});
+
+impl_op_ex!(+ |a: &LabeledPoint, b: &Point| -> LabeledPoint {
+    LabeledPoint {
+        x: a.x + b.x,
+        y: a.y + b.y,
+        z: a.z + b.z,
+        label: None
+    }
+});
 
 pub fn get_gate_dict() -> &'static HashMap<String, GateInfo> {
     static CONFIG: OnceLock<HashMap<String, GateInfo>> = OnceLock::new();
@@ -98,6 +138,12 @@ pub struct Gate {
     pub x: i32,
     pub z: i32,
     pub y: i32
+}
+
+impl Gate {
+    pub fn local_to_global_coords(&self, point: &Point) -> LabeledPoint {
+        return LabeledPoint::no_label(self.x + point.x, self.y + point.y, self.z + point.z);
+    }
 }
 
 #[derive(Clone, Debug)]

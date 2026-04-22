@@ -54,12 +54,11 @@ pub fn lee(file: &mut File, file_error: &str, settings: &LeeSettings, gates: &Ve
         for x in 0..gate_info.x_dim {
             for y in 0..gate_info.y_dim {
                 for z in 0..gate_info.z_dim {
-                    let point = &points::LabeledPoint {
-                        x: gate.x + x,
-                        y: gate.y + y,
-                        z: gate.z + z,
-                        label: None
-                    };
+                    let point = &points::LabeledPoint::no_label(
+                        gate.x + x,
+                        gate.y + y,
+                        gate.z + z
+                    );
 
                     // Ignore gate points outside of grid (i.e. gates that are taller than the highest pin y)
                     if initial_grid.get(point).is_ok_and(|v| v != grid::cell::EMPTY) {
@@ -72,7 +71,7 @@ pub fn lee(file: &mut File, file_error: &str, settings: &LeeSettings, gates: &Ve
         }
 
         for pin in gate_info.inputs.values().chain(gate_info.outputs.values()) {
-            initial_grid.add_pin_skirt(&points::LabeledPoint { x: gate.x + pin.x, y: gate.y + pin.y, z: gate.z + pin.z, label: None });
+            initial_grid.add_pin_skirt(&gate.local_to_global_coords(pin));
         }
     }
 
@@ -141,7 +140,7 @@ pub fn lee(file: &mut File, file_error: &str, settings: &LeeSettings, gates: &Ve
     for x in final_grid.min.x..=final_grid.max.x {
         for y in final_grid.min.y..=final_grid.max.y {
             for z in final_grid.min.z..=final_grid.max.z {
-                if grid::cell::is_wire(final_grid.get(&points::LabeledPoint { x, y, z, label: None }).unwrap()) {
+                if grid::cell::is_wire(final_grid.get(&points::LabeledPoint::no_label(x, y, z)).unwrap()) {
                     writeln!(file, "setblock ~{} ~{} ~{} minecraft:pink_wool",
                         x, y - 1, z).expect(file_error);
                     writeln!(file, "setblock ~{} ~{} ~{} minecraft:redstone_wire",
@@ -198,12 +197,7 @@ fn route_wire(initial_grid: &grid::Grid, wire: &points::Wire) -> Result<points::
 
         // Add adjacent points to queue if they're empty
         for delta in points::MANHATTEN_NEIGHBORHOOD {
-            let point = points::LabeledPoint {
-                x: current.x + delta.x,
-                y: current.y + delta.y,
-                z: current.z + delta.z,
-                label: None
-            };
+            let point = &current + delta;
             if temp_grid.get(&point).is_ok_and(|x| x == grid::cell::EMPTY) ||
                     ends_to_reach.contains(&point) {
                 _ = temp_grid.set(&point, current_distance + 1);
@@ -230,12 +224,7 @@ fn route_wire(initial_grid: &grid::Grid, wire: &points::Wire) -> Result<points::
             println!("Current: {current:?} = {current_value}");
 
             for delta in points::MANHATTEN_NEIGHBORHOOD {
-                let neighbor = points::LabeledPoint {
-                    x: current.x + delta.x,
-                    y: current.y + delta.y,
-                    z: current.z + delta.z,
-                    label: None
-                };
+                let neighbor = &current + delta;
                 if neighbor.compare(&wire.start) ||
                     temp_grid.get(&neighbor).is_ok_and(|neighbor_value|
                         grid::cell::is_lee_floodfill(neighbor_value) &&  // Don't go to gates/other wires

@@ -6,7 +6,7 @@ use blif_parser::*;
 use petgraph::{Directed, graph::{self, NodeIndex}, visit::EdgeRef};
 use primitives::ParsedPrimitive;
 
-use crate::{mcfunction, points};
+use crate::points;
 
 // TODO: load this info from a data file that is also used to generate mc.lib
 const INPUT_PIN_NAMES: [&'static str; 4] = ["A", "B", "C", "D"];
