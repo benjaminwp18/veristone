@@ -40,6 +40,8 @@ const REDSTONE_NEIGHBORHOOD: &[LabeledPoint; 14] = &[
     LabeledPoint { x:  0, y:  -1, z: -1, label: None }
 ];
 
+const MAX_SIGNAL_STRENGTH: u8 = 15;
+
 pub struct Gate {
     pub name: String,
     pub x: i32,
@@ -84,6 +86,10 @@ impl LabeledPoint {
         self.x == point.x && self.y == point.y && self.z == point.z
     }
 
+    fn compare_point(&self, point: &Point) -> bool {
+        self.x == point.x && self.y == point.y && self.z == point.z
+    }
+
     fn to_point(&self) -> Point {
         Point {
             x: self.x,
@@ -123,6 +129,12 @@ impl PartialOrd for RouteCost {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(self.cmp(other))
     }
+}
+
+struct RedstoneSegment {
+    point: Point,
+    prev_delta: Point,
+    signal_strength: u8
 }
 
 #[derive(Debug, Deserialize)]
@@ -253,7 +265,7 @@ impl Grid {
     }
 
     fn modify_skirt(&mut self, pin: &LabeledPoint, value_to_replace: i32, value_to_write: i32) {
-        for delta1 in MANHATTEN_NEIGHBORHOOD {
+        for delta1 in REDSTONE_NEIGHBORHOOD {
             let neighbor = LabeledPoint {
                 x: pin.x + delta1.x,
                 y: pin.y + delta1.y,
@@ -266,7 +278,7 @@ impl Grid {
                         self.set(&neighbor, value_to_write).unwrap();
                     }
 
-                    for delta2 in MANHATTEN_NEIGHBORHOOD {
+                    for delta2 in REDSTONE_NEIGHBORHOOD {
                         let grandneighbor = LabeledPoint {
                             x: neighbor.x + delta2.x,
                             y: neighbor.y + delta2.y,
@@ -538,6 +550,23 @@ pub fn write_mcfunction(
                     final_grid.add_route(routes.last().unwrap());
                     for pin in std::iter::once(&wire.start).chain(wire.ends.iter()) {
                         final_grid.add_pin_skirt(pin);
+                    }
+                }
+            }
+
+            for route in routes {
+                let mut to_visit: Vec<RedstoneSegment> = vec![RedstoneSegment {
+                    point: route.wire.start.to_point(),
+                    prev_delta: Point { x: 0, y: 0, z: 0 },
+                    signal_strength: MAX_SIGNAL_STRENGTH - 1
+                }];
+                while !to_visit.is_empty() {
+                    let cur_point = to_visit.pop().unwrap();
+                    let mut next_points: Vec<Point> = vec![];
+
+                    for delta in REDSTONE_NEIGHBORHOOD {
+                        if !delta.compare_point(&cur_point.prev_delta) && final_grid.get() {
+                        }
                     }
                 }
             }
