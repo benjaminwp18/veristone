@@ -6,7 +6,7 @@ use blif_parser::*;
 use petgraph::{Directed, graph::{self, NodeIndex}, visit::EdgeRef};
 use primitives::ParsedPrimitive;
 
-use crate::mcfunction;
+use crate::{mcfunction, points};
 
 // TODO: load this info from a data file that is also used to generate mc.lib
 const INPUT_PIN_NAMES: [&'static str; 4] = ["A", "B", "C", "D"];
@@ -68,7 +68,7 @@ struct Module {
 
 #[allow(unused_variables)]
 pub fn read_blif(blif_path: &Path, placement_algo: PlacementAlgo, connect_io: bool)
-        -> (Vec<mcfunction::Gate>, Vec<mcfunction::Wire>) {
+        -> (Vec<points::Gate>, Vec<points::Wire>) {
     let binding = path::absolute(blif_path).unwrap().into_os_string();
     let full_path = binding.to_str().unwrap();
 
@@ -109,9 +109,8 @@ pub fn read_blif(blif_path: &Path, placement_algo: PlacementAlgo, connect_io: bo
     fs::write(format!("res/graphs/graph_{stem}.svg"), graph_svg).expect("Writing SVG to file:");*/
 
     // Place gates & get wire target endpoints
-    let gate_info = mcfunction::read_gate_info();
-    let gates_map = place_gates(&graph, &gate_info, placement_algo);
-    let wires = get_wires(&graph, &gates_map, &gate_info, connect_io);
+    let gates_map = place_gates(&graph, placement_algo);
+    let wires = get_wires(&graph, &gates_map, connect_io);
     let gates = gates_map.into_values().collect();
 
     return (gates, wires);
@@ -216,16 +215,15 @@ fn add_module_to_graph(
 
 fn place_gates(
     graph: &graph::Graph<Node, String, Directed>,
-    gate_info: &HashMap<String, mcfunction::GateInfo>,
     placement_algo: PlacementAlgo
-) -> HashMap<NodeIndex, mcfunction::Gate> {
-    let mut gates: HashMap<NodeIndex, mcfunction::Gate> = HashMap::new();
+) -> HashMap<NodeIndex, points::Gate> {
+    let mut gates: HashMap<NodeIndex, points::Gate> = HashMap::new();
 
     match placement_algo {
         PlacementAlgo::DumbGrid { num_cols } => {
             const CELL_PADDING: i32 = 4;
             let mut cell_size = 0;
-            for (_, gate_info) in gate_info {
+            for (_, gate_info) in points::get_gate_dict() {
                 if gate_info.z_dim > cell_size {
                     cell_size = gate_info.z_dim;
                 }
@@ -244,7 +242,7 @@ fn place_gates(
                     NodeType::Gate => {
                         gates.insert(
                             node_idx,
-                            mcfunction::Gate {
+                            points::Gate {
                                 // TODO: standardize capitalization of gate names/generate lib from json
                                 name: node_weight.name.to_lowercase(),
                                 z: col_idx * cell_size + CELL_PADDING,
@@ -269,11 +267,11 @@ fn place_gates(
 
 fn get_wires(
     graph: &graph::Graph<Node, String, Directed>,
-    gates: &HashMap<NodeIndex, mcfunction::Gate>,
-    gate_info: &HashMap<String, mcfunction::GateInfo>,
+    gates: &HashMap<NodeIndex, points::Gate>,
     connect_io: bool
-) -> Vec<mcfunction::Wire> {
-    let mut wires: Vec<mcfunction::Wire> = vec![];
+) -> Vec<points::Wire> {
+    let mut wires: Vec<points::Wire> = vec![];
+    let gate_dict = points::get_gate_dict();
 
     let mut input_idx = 0;
     let mut output_idx = 0;
@@ -282,12 +280,12 @@ fn get_wires(
         let node_weight = graph.node_weight(node_idx).unwrap();
         match node_weight.node_type {
             NodeType::Net => {
-                let mut start: Option<mcfunction::LabeledPoint> = None;
+                let mut start: Option<points::LabeledPoint> = None;
                 for edge in graph.edges_directed(node_idx, petgraph::Direction::Incoming) {
                     let source_gate_meta = gates.get(&edge.source()).unwrap();
-                    let source_gate_info = gate_info.get(&source_gate_meta.name).unwrap();
+                    let source_gate_info = gate_dict.get(&source_gate_meta.name).unwrap();
                     let source_pin_offset = source_gate_info.outputs.get(edge.weight()).unwrap();
-                    start = Some(mcfunction::LabeledPoint {
+                    start = Some(points::LabeledPoint {
                         x: source_gate_meta.x + source_pin_offset.x,
                         z: source_gate_meta.z + source_pin_offset.z,
                         y: 0,
@@ -297,7 +295,7 @@ fn get_wires(
                 if start.is_none() && connect_io {
                     // Only set start for circuit inputs if we're connecting IO
                     // Otherwise leave it as None for later
-                    start = Some(mcfunction::LabeledPoint {
+                    start = Some(points::LabeledPoint {
                         x: -2,
                         z: input_idx * 2,
                         y: 0,
@@ -306,12 +304,12 @@ fn get_wires(
                     input_idx += 1;
                 }
 
-                let mut ends: Vec<mcfunction::LabeledPoint> = vec![];
+                let mut ends: Vec<points::LabeledPoint> = vec![];
                 for edge in graph.edges_directed(node_idx, petgraph::Direction::Outgoing) {
                     let target_gate_meta = gates.get(&edge.target()).unwrap();
-                    let target_gate_info = gate_info.get(&target_gate_meta.name).unwrap();
+                    let target_gate_info = gate_dict.get(&target_gate_meta.name).unwrap();
                     let target_pin_offset = target_gate_info.inputs.get(edge.weight()).unwrap();
-                    ends.push(mcfunction::LabeledPoint {
+                    ends.push(points::LabeledPoint {
                         x: target_gate_meta.x + target_pin_offset.x,
                         z: target_gate_meta.z + target_pin_offset.z,
                         y: 0,
@@ -320,7 +318,7 @@ fn get_wires(
                 }
                 if ends.len() == 0 {
                     if connect_io {
-                        ends.push(mcfunction::LabeledPoint {
+                        ends.push(points::LabeledPoint {
                             x: -4,
                             z: output_idx * 2,
                             y: 0,
@@ -339,7 +337,7 @@ fn get_wires(
                     start = ends.pop();
                 }
 
-                wires.push(mcfunction::Wire {
+                wires.push(points::Wire {
                     start: start.clone().unwrap(),
                     ends: ends
                 });

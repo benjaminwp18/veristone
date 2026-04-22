@@ -1,9 +1,7 @@
 use std::path::Path;
 use clap::Parser;
 
-use veristone::make_blif;
-use veristone::read_blif;
-use veristone::mcfunction;
+use veristone::{lee, make_blif, read_blif, mcfunction, points};
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -21,9 +19,9 @@ fn main() {
     let (gates, wires) = read_blif::read_blif(blif_path, read_blif::PlacementAlgo::DumbGrid { num_cols: 4 }, false);
     mcfunction::write_mcfunction(
         &gates, &wires,
-        mcfunction::RoutingAlgo::Lee {
-            padding: mcfunction::Point { x: 3, y: 5, z: 3 },
+        mcfunction::RoutingAlgo::Lee(lee::LeeSettings {
+            padding: points::Point { x: 3, y: 5, z: 3 },
             do_rerouting: false
-        }
+        })
     ).unwrap();
 }
