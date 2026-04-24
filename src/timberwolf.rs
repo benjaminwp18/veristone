@@ -1,9 +1,9 @@
 use petgraph::{graph::{self, NodeIndex}, Directed};
-use std::{cmp::{max, min}, collections::HashMap, fs::File, io::{self, Write}, path::Path};
+use std::{cmp::{max, min}, collections::HashMap, fs::File, io::Write, path::Path};
 use rand::{Rng, seq::IndexedRandom};
 use plotters::{drawing::IntoDrawingArea, prelude, style::{IntoFont, Palette, Palette99, ShapeStyle}};
 
-use crate::{mcfunction, read_blif};
+use crate::{read_blif, points};
 
 // Schedule from page 434 of the Timberwolf paper: https://cs.baylor.edu/~maurer/CSI5346/timberwolf.pdf
 const TEMPERATURE_START: f32 = 4000000.0;
@@ -40,14 +40,14 @@ pub mod LoggingRules {
 }
 
 enum Perturbation<'a> {
-    Move { idx: &'a NodeIndex, start: mcfunction::Point, end: mcfunction::Point },
-    Swap { idx1: &'a NodeIndex, idx2: &'a NodeIndex, end1: mcfunction::Point, end2: mcfunction::Point }
+    Move { idx: &'a NodeIndex, start: points::Point, end: points::Point },
+    Swap { idx1: &'a NodeIndex, idx2: &'a NodeIndex, end1: points::Point, end2: points::Point }
 }
 
 impl <'a> Perturbation<'a> {
     fn to_string(&self, idx_to_int: &HashMap<&NodeIndex, u32>) -> String {
         match self {
-            Perturbation::Move { idx, start, end } => {
+            Perturbation::Move { idx, start: _, end } => {
                 return format!("Move {} -> {end}", idx_to_int.get(*idx).unwrap());
             },
             Perturbation::Swap { idx1, idx2, end1, end2 } => {
@@ -63,9 +63,9 @@ impl <'a> Perturbation<'a> {
 
 pub fn anneal(
     circuit_graph: &graph::Graph<read_blif::Node, String, Directed>,
-    gate_info: &HashMap<String, mcfunction::GateInfo>,
+    gate_info: &HashMap<String, points::GateInfo>,
     logging_rules: u8
-) -> HashMap<NodeIndex, mcfunction::Gate> {
+) -> HashMap<NodeIndex, points::Gate> {
     let mut current_state = gen_random_state(circuit_graph);
     let mut candidate_state = current_state.clone();
     let idxs: Vec<NodeIndex> = current_state.keys().map(|k| *k).collect();
@@ -106,7 +106,7 @@ pub fn anneal(
             if accepted {
                 // Record perturbations for later plotting
                 match &perturbation {
-                    Perturbation::Move { idx, start, end } => {
+                    Perturbation::Move { idx, start: _, end } => {
                         series_map.get_mut(idx).unwrap().push((end.x, end.z));
                     },
                     Perturbation::Swap { idx1, idx2, end1, end2 } => {
@@ -154,11 +154,11 @@ pub fn anneal(
                     match &perturbation {
                         Perturbation::Move { idx, start, end } => {
                             csv_file.serialize((
-                                temperature_s, 
-                                current_cost_s, 
-                                candidate_cost_s, 
-                                probability_s, 
-                                accepted, 
+                                temperature_s,
+                                current_cost_s,
+                                candidate_cost_s,
+                                probability_s,
+                                accepted,
                                 "Move",
                                 idx_to_int.get(*idx).unwrap(),
                                 start.x,
@@ -170,10 +170,10 @@ pub fn anneal(
                         }
                         Perturbation::Swap { idx1, idx2, end1, end2 } => {
                             csv_file.serialize((
-                                temperature_s, 
-                                current_cost_s, 
-                                candidate_cost_s, 
-                                probability_s, 
+                                temperature_s,
+                                current_cost_s,
+                                candidate_cost_s,
+                                probability_s,
                                 accepted,
                                 "Swap",
                                 idx_to_int.get(*idx1).unwrap(),
@@ -259,16 +259,16 @@ pub fn anneal(
 }
 
 fn cost(
-    state: &HashMap<NodeIndex, mcfunction::Gate>,
+    state: &HashMap<NodeIndex, points::Gate>,
     graph: &graph::Graph<read_blif::Node, String, Directed>,
-    gate_info: &HashMap<String, mcfunction::GateInfo>
+    gate_info: &HashMap<String, points::GateInfo>
 ) -> f32 {
     let mut cost = 0f32;
 
     // Overlapping gates & gates too close together (within 2 * GATE_PADDING)
     let mut overlap_cost = 0i32;
     let mut padding_cost = 0i32;
-    let ordered_gates: Vec<&mcfunction::Gate> = state.values().collect();
+    let ordered_gates: Vec<&points::Gate> = state.values().collect();
     for i in 0..ordered_gates.len() {
         let gate1 = ordered_gates[i];
         let gate_info_1 = gate_info.get(&ordered_gates[i].name).unwrap();
@@ -320,17 +320,19 @@ fn cost(
     cost += BOUND_COST_WEIGHT * bound_cost as f32;
 
     // TEIC: Total Estimated Interconnect Cost (summative wire length)
-    let wires = read_blif::get_wires(graph, state, gate_info);
+    let wires = read_blif::get_wires(graph, state, false);
     let mut tei_cost = 0;
     for wire in wires {
-        tei_cost += (wire.end.x - wire.start.x).abs() + (wire.end.y - wire.start.y).abs() + (wire.end.z - wire.start.z).abs();
+        for end in wire.ends {
+            tei_cost += (end.x - wire.start.x).abs() + (end.y - wire.start.y).abs() + (end.z - wire.start.z).abs();
+        }
     }
     cost += TEI_COST_WEIGHT * tei_cost as f32;
 
     return cost;
 }
 
-fn perturb<'a>(state: &mut HashMap<NodeIndex, mcfunction::Gate>, idxs: &'a Vec<NodeIndex>) -> Perturbation<'a> {
+fn perturb<'a>(state: &mut HashMap<NodeIndex, points::Gate>, idxs: &'a Vec<NodeIndex>) -> Perturbation<'a> {
     match rand::rng().random_range(0..=MOVES_PER_SWAP) {
         0 => {
             // Swap
@@ -344,12 +346,14 @@ fn perturb<'a>(state: &mut HashMap<NodeIndex, mcfunction::Gate>, idxs: &'a Vec<N
             return Perturbation::Swap {
                 idx1,
                 idx2,
-                end1: mcfunction::Point {
+                end1: points::Point {
                     x: state.get(idx1).unwrap().x,
+                    y: 0,
                     z: state.get(idx1).unwrap().z
                 },
-                end2: mcfunction::Point {
+                end2: points::Point {
                     x: state.get(idx2).unwrap().x,
+                    y: 0,
                     z: state.get(idx2).unwrap().z
                 }
             };
@@ -358,18 +362,20 @@ fn perturb<'a>(state: &mut HashMap<NodeIndex, mcfunction::Gate>, idxs: &'a Vec<N
             // Move
             let random_idx = idxs.choose(&mut rand::rng()).unwrap();
             let gate = state.get_mut(random_idx).unwrap();
-            let start_point = mcfunction::Point {
-                    x: gate.x, 
-                    z: gate.z 
-                };
+            let start_point = points::Point {
+                x: gate.x,
+                y: 0,
+                z: gate.z
+            };
             gate.x += rand::rng().random_range(-5..=5);
             gate.z += rand::rng().random_range(-5..=5);
 
             return Perturbation::Move {
                 idx: random_idx,
                 start: start_point,
-                end: mcfunction::Point {
+                end: points::Point {
                     x: gate.x,
+                    y: 0,
                     z: gate.z
                 }
             };
@@ -394,17 +400,18 @@ fn accept_prob(delta_cost: f32, temperature: f32) -> f32 {
     return f32::min(1f32, f32::exp(-delta_cost / temperature));
 }
 
-fn gen_random_state(circuit_graph: &graph::Graph<read_blif::Node, String, Directed>) -> HashMap<NodeIndex, mcfunction::Gate> {
-    let mut gates: HashMap<NodeIndex, mcfunction::Gate> = HashMap::new();
+fn gen_random_state(circuit_graph: &graph::Graph<read_blif::Node, String, Directed>) -> HashMap<NodeIndex, points::Gate> {
+    let mut gates: HashMap<NodeIndex, points::Gate> = HashMap::new();
 
     for node_idx in circuit_graph.node_indices() {
         let node_weight = circuit_graph.node_weight(node_idx).unwrap();
         match node_weight.node_type {
             read_blif::NodeType::Gate => {
-                gates.insert(node_idx, mcfunction::Gate {
+                gates.insert(node_idx, points::Gate {
                     name: node_weight.name.clone(),
                     // Start in closest 3rd of the available area
                     x: rand::rng().random_range(COORD_MIN..=COORD_MAX / 3),
+                    y: 0,
                     z: rand::rng().random_range(COORD_MIN..=COORD_MAX / 3),
                 });
             },

@@ -14,5 +14,5 @@ struct Args {
 fn main() {
     let args = Args::parse();
     let blif_path = Path::new(&args.blif);
-    read_blif::read_blif(blif_path, read_blif::PlacementAlgo::TimberWolf);
+    read_blif::read_blif(blif_path, read_blif::PlacementAlgo::TimberWolf, true);
 }

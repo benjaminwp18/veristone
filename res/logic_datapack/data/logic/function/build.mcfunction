@@ -1,77 +1,173 @@
-place template logic:and_gate ~11 ~ ~2
-place template logic:or_gate ~76 ~ ~11
-place template logic:xor_gate ~4 ~ ~0
-place template logic:xor_gate ~0 ~ ~4
-place template logic:and_gate ~57 ~ ~8
-setblock ~12 ~-1 ~5 minecraft:redstone_lamp
-setblock ~76 ~-1 ~11 minecraft:target
-setblock ~76 ~-2 ~11 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~-64 ~1 ~-6 minecraft:redstone_lamp[lit=true] run setblock ~ ~1 ~ minecraft:redstone_block"}
-setblock ~76 ~-3 ~11 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~-64 ~2 ~-6 minecraft:redstone_lamp[lit=false] run setblock ~ ~2 ~ minecraft:target"}
-summon minecraft:armor_stand ~12.5 ~0 ~5.5 {Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: "Y -> full_add#0.y"}
-summon minecraft:armor_stand ~76.5 ~0 ~11.5 {Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: "full_add#0.y -> A"}
-setblock ~58 ~-1 ~11 minecraft:redstone_lamp
-setblock ~78 ~-1 ~11 minecraft:target
-setblock ~78 ~-2 ~11 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~-20 ~1 ~0 minecraft:redstone_lamp[lit=true] run setblock ~ ~1 ~ minecraft:redstone_block"}
-setblock ~78 ~-3 ~11 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~-20 ~2 ~0 minecraft:redstone_lamp[lit=false] run setblock ~ ~2 ~ minecraft:target"}
-summon minecraft:armor_stand ~58.5 ~0 ~11.5 {Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: "Y -> full_add#0.z"}
-summon minecraft:armor_stand ~78.5 ~0 ~11.5 {Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: "full_add#0.z -> B"}
-setblock ~77 ~-1 ~13 minecraft:redstone_lamp
-setblock ~-6 ~0 ~0 minecraft:target
-setblock ~-6 ~-1 ~0 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~83 ~0 ~13 minecraft:redstone_lamp[lit=true] run setblock ~ ~1 ~ minecraft:redstone_block"}
-setblock ~-6 ~-2 ~0 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~83 ~1 ~13 minecraft:redstone_lamp[lit=false] run setblock ~ ~2 ~ minecraft:target"}
-summon minecraft:armor_stand ~77.5 ~0 ~13.5 {Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: "Y -> full_add#0.cout"}
-summon minecraft:armor_stand ~-5.5 ~1 ~0.5 {Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: "full_add#0.cout"}
-setblock ~-4 ~0 ~0 minecraft:redstone_lamp
-setblock ~4 ~-1 ~0 minecraft:target
-setblock ~4 ~-2 ~0 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~-8 ~2 ~0 minecraft:redstone_lamp[lit=true] run setblock ~ ~1 ~ minecraft:redstone_block"}
-setblock ~4 ~-3 ~0 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~-8 ~3 ~0 minecraft:redstone_lamp[lit=false] run setblock ~ ~2 ~ minecraft:target"}
-summon minecraft:armor_stand ~-3.5 ~1 ~0.5 {Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: "full_add#0.a"}
-summon minecraft:armor_stand ~4.5 ~0 ~0.5 {Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: "full_add#0.a -> A"}
-setblock ~-4 ~0 ~0 minecraft:redstone_lamp
-setblock ~11 ~-1 ~2 minecraft:target
-setblock ~11 ~-2 ~2 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~-15 ~2 ~-2 minecraft:redstone_lamp[lit=true] run setblock ~ ~1 ~ minecraft:redstone_block"}
-setblock ~11 ~-3 ~2 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~-15 ~3 ~-2 minecraft:redstone_lamp[lit=false] run setblock ~ ~2 ~ minecraft:target"}
-summon minecraft:armor_stand ~-3.5 ~1 ~0.5 {Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: "full_add#0.a"}
-summon minecraft:armor_stand ~11.5 ~0 ~2.5 {Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: "full_add#0.a -> A"}
-setblock ~-4 ~0 ~2 minecraft:redstone_lamp
-setblock ~6 ~-1 ~0 minecraft:target
-setblock ~6 ~-2 ~0 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~-10 ~2 ~2 minecraft:redstone_lamp[lit=true] run setblock ~ ~1 ~ minecraft:redstone_block"}
-setblock ~6 ~-3 ~0 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~-10 ~3 ~2 minecraft:redstone_lamp[lit=false] run setblock ~ ~2 ~ minecraft:target"}
-summon minecraft:armor_stand ~-3.5 ~1 ~2.5 {Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: "full_add#0.b"}
-summon minecraft:armor_stand ~6.5 ~0 ~0.5 {Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: "full_add#0.b -> B"}
-setblock ~-4 ~0 ~2 minecraft:redstone_lamp
-setblock ~13 ~-1 ~2 minecraft:target
-setblock ~13 ~-2 ~2 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~-17 ~2 ~0 minecraft:redstone_lamp[lit=true] run setblock ~ ~1 ~ minecraft:redstone_block"}
-setblock ~13 ~-3 ~2 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~-17 ~3 ~0 minecraft:redstone_lamp[lit=false] run setblock ~ ~2 ~ minecraft:target"}
-summon minecraft:armor_stand ~-3.5 ~1 ~2.5 {Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: "full_add#0.b"}
-summon minecraft:armor_stand ~13.5 ~0 ~2.5 {Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: "full_add#0.b -> B"}
-setblock ~5 ~-1 ~4 minecraft:redstone_lamp
-setblock ~0 ~-1 ~4 minecraft:target
-setblock ~0 ~-2 ~4 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~5 ~1 ~0 minecraft:redstone_lamp[lit=true] run setblock ~ ~1 ~ minecraft:redstone_block"}
-setblock ~0 ~-3 ~4 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~5 ~2 ~0 minecraft:redstone_lamp[lit=false] run setblock ~ ~2 ~ minecraft:target"}
-summon minecraft:armor_stand ~5.5 ~0 ~4.5 {Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: "Y -> full_add#0.x"}
-summon minecraft:armor_stand ~0.5 ~0 ~4.5 {Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: "full_add#0.x -> A"}
-setblock ~5 ~-1 ~4 minecraft:redstone_lamp
-setblock ~57 ~-1 ~8 minecraft:target
-setblock ~57 ~-2 ~8 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~-52 ~1 ~-4 minecraft:redstone_lamp[lit=true] run setblock ~ ~1 ~ minecraft:redstone_block"}
-setblock ~57 ~-3 ~8 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~-52 ~2 ~-4 minecraft:redstone_lamp[lit=false] run setblock ~ ~2 ~ minecraft:target"}
-summon minecraft:armor_stand ~5.5 ~0 ~4.5 {Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: "Y -> full_add#0.x"}
-summon minecraft:armor_stand ~57.5 ~0 ~8.5 {Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: "full_add#0.x -> A"}
-setblock ~-4 ~0 ~4 minecraft:redstone_lamp
-setblock ~2 ~-1 ~4 minecraft:target
-setblock ~2 ~-2 ~4 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~-6 ~2 ~0 minecraft:redstone_lamp[lit=true] run setblock ~ ~1 ~ minecraft:redstone_block"}
-setblock ~2 ~-3 ~4 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~-6 ~3 ~0 minecraft:redstone_lamp[lit=false] run setblock ~ ~2 ~ minecraft:target"}
-summon minecraft:armor_stand ~-3.5 ~1 ~4.5 {Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: "full_add#0.cin"}
-summon minecraft:armor_stand ~2.5 ~0 ~4.5 {Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: "full_add#0.cin -> B"}
-setblock ~-4 ~0 ~4 minecraft:redstone_lamp
-setblock ~59 ~-1 ~8 minecraft:target
-setblock ~59 ~-2 ~8 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~-63 ~2 ~-4 minecraft:redstone_lamp[lit=true] run setblock ~ ~1 ~ minecraft:redstone_block"}
-setblock ~59 ~-3 ~8 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~-63 ~3 ~-4 minecraft:redstone_lamp[lit=false] run setblock ~ ~2 ~ minecraft:target"}
-summon minecraft:armor_stand ~-3.5 ~1 ~4.5 {Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: "full_add#0.cin"}
-summon minecraft:armor_stand ~59.5 ~0 ~8.5 {Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: "full_add#0.cin -> B"}
-setblock ~1 ~-1 ~8 minecraft:redstone_lamp
-setblock ~-6 ~0 ~2 minecraft:target
-setblock ~-6 ~-1 ~2 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~7 ~0 ~6 minecraft:redstone_lamp[lit=true] run setblock ~ ~1 ~ minecraft:redstone_block"}
-setblock ~-6 ~-2 ~2 minecraft:repeating_command_block{auto: 1b, Command: "execute if block ~7 ~1 ~6 minecraft:redstone_lamp[lit=false] run setblock ~ ~2 ~ minecraft:target"}
-summon minecraft:armor_stand ~1.5 ~0 ~8.5 {Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: "Y -> full_add#0.sum"}
-summon minecraft:armor_stand ~-5.5 ~1 ~2.5 {Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: "full_add#0.sum"}
+place template logic:xor_gate ~29 ~ ~33
+place template logic:and_gate ~20 ~ ~33
+place template logic:xor_gate ~32 ~ ~43
+place template logic:or_gate ~12 ~ ~41
+place template logic:and_gate ~21 ~ ~42
+setblock ~22 ~-1 ~37 minecraft:pink_wool
+setblock ~22 ~0 ~37 minecraft:redstone_wire
+setblock ~22 ~-1 ~38 minecraft:pink_wool
+setblock ~22 ~0 ~38 minecraft:redstone_wire
+setblock ~21 ~-1 ~38 minecraft:pink_wool
+setblock ~21 ~0 ~38 minecraft:redstone_wire
+setblock ~20 ~-1 ~38 minecraft:pink_wool
+setblock ~20 ~0 ~38 minecraft:redstone_wire
+setblock ~19 ~-1 ~38 minecraft:pink_wool
+setblock ~19 ~0 ~38 minecraft:redstone_wire
+setblock ~18 ~-1 ~38 minecraft:pink_wool
+setblock ~18 ~0 ~38 minecraft:redstone_wire
+setblock ~17 ~-1 ~38 minecraft:pink_wool
+setblock ~17 ~0 ~38 minecraft:redstone_wire
+setblock ~16 ~-1 ~38 minecraft:pink_wool
+setblock ~16 ~0 ~38 minecraft:redstone_wire
+setblock ~15 ~-1 ~38 minecraft:pink_wool
+setblock ~15 ~0 ~38 minecraft:redstone_wire
+setblock ~14 ~-1 ~38 minecraft:pink_wool
+setblock ~14 ~0 ~38 minecraft:redstone_wire
+setblock ~14 ~-1 ~39 minecraft:pink_wool
+setblock ~14 ~0 ~39 minecraft:redstone_wire
+setblock ~13 ~-1 ~39 minecraft:pink_wool
+setblock ~13 ~0 ~39 minecraft:redstone_wire
+setblock ~13 ~-1 ~40 minecraft:pink_wool
+setblock ~13 ~0 ~40 minecraft:redstone_wire
+setblock ~23 ~-1 ~46 minecraft:pink_wool
+setblock ~23 ~0 ~46 minecraft:redstone_wire
+setblock ~22 ~-1 ~46 minecraft:pink_wool
+setblock ~22 ~0 ~46 minecraft:redstone_wire
+setblock ~21 ~-1 ~46 minecraft:pink_wool
+setblock ~21 ~0 ~46 minecraft:redstone_wire
+setblock ~20 ~-1 ~46 minecraft:pink_wool
+setblock ~20 ~0 ~46 minecraft:redstone_wire
+setblock ~20 ~-1 ~45 minecraft:pink_wool
+setblock ~20 ~0 ~45 minecraft:redstone_wire
+setblock ~20 ~-1 ~44 minecraft:pink_wool
+setblock ~20 ~0 ~44 minecraft:redstone_wire
+setblock ~20 ~-1 ~43 minecraft:pink_wool
+setblock ~20 ~0 ~43 minecraft:redstone_wire
+setblock ~19 ~-1 ~43 minecraft:pink_wool
+setblock ~19 ~0 ~43 minecraft:redstone_wire
+setblock ~19 ~-1 ~42 minecraft:pink_wool
+setblock ~19 ~0 ~42 minecraft:redstone_wire
+setblock ~19 ~-1 ~41 minecraft:pink_wool
+setblock ~19 ~0 ~41 minecraft:redstone_wire
+setblock ~19 ~-1 ~40 minecraft:pink_wool
+setblock ~19 ~0 ~40 minecraft:redstone_wire
+setblock ~18 ~-1 ~40 minecraft:pink_wool
+setblock ~18 ~0 ~40 minecraft:redstone_wire
+setblock ~17 ~-1 ~40 minecraft:pink_wool
+setblock ~17 ~0 ~40 minecraft:redstone_wire
+setblock ~16 ~-1 ~40 minecraft:pink_wool
+setblock ~16 ~0 ~40 minecraft:repeater[facing=east]
+setblock ~15 ~-1 ~40 minecraft:pink_wool
+setblock ~15 ~0 ~40 minecraft:redstone_wire
+setblock ~21 ~0 ~32 minecraft:pink_wool
+setblock ~21 ~1 ~32 minecraft:redstone_wire
+setblock ~21 ~1 ~31 minecraft:pink_wool
+setblock ~21 ~2 ~31 minecraft:redstone_wire
+setblock ~22 ~2 ~31 minecraft:pink_wool
+setblock ~22 ~3 ~31 minecraft:redstone_wire
+setblock ~23 ~3 ~31 minecraft:pink_wool
+setblock ~23 ~4 ~31 minecraft:redstone_wire
+setblock ~24 ~2 ~31 minecraft:pink_wool
+setblock ~24 ~3 ~31 minecraft:redstone_wire
+setblock ~25 ~1 ~31 minecraft:pink_wool
+setblock ~25 ~2 ~31 minecraft:redstone_wire
+setblock ~25 ~0 ~32 minecraft:pink_wool
+setblock ~25 ~1 ~32 minecraft:redstone_wire
+setblock ~26 ~-1 ~32 minecraft:pink_wool
+setblock ~26 ~0 ~32 minecraft:redstone_wire
+setblock ~27 ~-1 ~32 minecraft:pink_wool
+setblock ~27 ~0 ~32 minecraft:redstone_wire
+setblock ~28 ~-1 ~32 minecraft:pink_wool
+setblock ~28 ~0 ~32 minecraft:redstone_wire
+setblock ~29 ~-1 ~32 minecraft:pink_wool
+setblock ~29 ~0 ~32 minecraft:redstone_wire
+setblock ~30 ~-1 ~32 minecraft:pink_wool
+setblock ~30 ~0 ~32 minecraft:redstone_wire
+setblock ~23 ~-1 ~32 minecraft:pink_wool
+setblock ~23 ~0 ~32 minecraft:redstone_wire
+setblock ~23 ~-1 ~31 minecraft:pink_wool
+setblock ~23 ~0 ~31 minecraft:redstone_wire
+setblock ~23 ~-1 ~30 minecraft:pink_wool
+setblock ~23 ~0 ~30 minecraft:redstone_wire
+setblock ~24 ~-1 ~30 minecraft:pink_wool
+setblock ~24 ~0 ~30 minecraft:redstone_wire
+setblock ~25 ~-1 ~30 minecraft:pink_wool
+setblock ~25 ~0 ~30 minecraft:redstone_wire
+setblock ~26 ~-1 ~30 minecraft:pink_wool
+setblock ~26 ~0 ~30 minecraft:redstone_wire
+setblock ~27 ~-1 ~30 minecraft:pink_wool
+setblock ~27 ~0 ~30 minecraft:redstone_wire
+setblock ~28 ~-1 ~30 minecraft:pink_wool
+setblock ~28 ~0 ~30 minecraft:redstone_wire
+setblock ~29 ~-1 ~30 minecraft:pink_wool
+setblock ~29 ~0 ~30 minecraft:redstone_wire
+setblock ~30 ~-1 ~30 minecraft:pink_wool
+setblock ~30 ~0 ~30 minecraft:redstone_wire
+setblock ~31 ~-1 ~30 minecraft:pink_wool
+setblock ~31 ~0 ~30 minecraft:redstone_wire
+setblock ~31 ~-1 ~31 minecraft:pink_wool
+setblock ~31 ~0 ~31 minecraft:redstone_wire
+setblock ~32 ~-1 ~31 minecraft:pink_wool
+setblock ~32 ~0 ~31 minecraft:redstone_wire
+setblock ~30 ~-1 ~30 minecraft:pink_wool
+setblock ~30 ~0 ~30 minecraft:repeater[facing=west]
+setblock ~31 ~-1 ~39 minecraft:pink_wool
+setblock ~31 ~0 ~39 minecraft:redstone_wire
+setblock ~31 ~-1 ~40 minecraft:pink_wool
+setblock ~31 ~0 ~40 minecraft:redstone_wire
+setblock ~31 ~-1 ~41 minecraft:pink_wool
+setblock ~31 ~0 ~41 minecraft:redstone_wire
+setblock ~31 ~-1 ~42 minecraft:pink_wool
+setblock ~31 ~0 ~42 minecraft:redstone_wire
+setblock ~32 ~-1 ~42 minecraft:pink_wool
+setblock ~32 ~0 ~42 minecraft:redstone_wire
+setblock ~33 ~-1 ~42 minecraft:pink_wool
+setblock ~33 ~0 ~42 minecraft:redstone_wire
+setblock ~30 ~-1 ~39 minecraft:pink_wool
+setblock ~30 ~0 ~39 minecraft:redstone_wire
+setblock ~29 ~-1 ~39 minecraft:pink_wool
+setblock ~29 ~0 ~39 minecraft:redstone_wire
+setblock ~28 ~-1 ~39 minecraft:pink_wool
+setblock ~28 ~0 ~39 minecraft:redstone_wire
+setblock ~27 ~-1 ~39 minecraft:pink_wool
+setblock ~27 ~0 ~39 minecraft:redstone_wire
+setblock ~26 ~-1 ~39 minecraft:pink_wool
+setblock ~26 ~0 ~39 minecraft:redstone_wire
+setblock ~25 ~-1 ~39 minecraft:pink_wool
+setblock ~25 ~0 ~39 minecraft:redstone_wire
+setblock ~24 ~-1 ~39 minecraft:pink_wool
+setblock ~24 ~0 ~39 minecraft:redstone_wire
+setblock ~23 ~-1 ~39 minecraft:pink_wool
+setblock ~23 ~0 ~39 minecraft:redstone_wire
+setblock ~23 ~-1 ~40 minecraft:pink_wool
+setblock ~23 ~0 ~40 minecraft:redstone_wire
+setblock ~22 ~-1 ~40 minecraft:pink_wool
+setblock ~22 ~0 ~40 minecraft:redstone_wire
+setblock ~22 ~-1 ~41 minecraft:pink_wool
+setblock ~22 ~0 ~41 minecraft:redstone_wire
+setblock ~24 ~0 ~41 minecraft:pink_wool
+setblock ~24 ~1 ~41 minecraft:redstone_wire
+setblock ~25 ~1 ~41 minecraft:pink_wool
+setblock ~25 ~2 ~41 minecraft:redstone_wire
+setblock ~26 ~2 ~41 minecraft:pink_wool
+setblock ~26 ~3 ~41 minecraft:redstone_wire
+setblock ~27 ~3 ~41 minecraft:pink_wool
+setblock ~27 ~4 ~41 minecraft:redstone_wire
+setblock ~28 ~3 ~41 minecraft:pink_wool
+setblock ~28 ~4 ~41 minecraft:redstone_wire
+setblock ~29 ~3 ~41 minecraft:pink_wool
+setblock ~29 ~4 ~41 minecraft:redstone_wire
+setblock ~30 ~3 ~41 minecraft:pink_wool
+setblock ~30 ~4 ~41 minecraft:redstone_wire
+setblock ~31 ~3 ~41 minecraft:pink_wool
+setblock ~31 ~4 ~41 minecraft:redstone_wire
+setblock ~32 ~3 ~41 minecraft:pink_wool
+setblock ~32 ~4 ~41 minecraft:redstone_wire
+setblock ~33 ~3 ~41 minecraft:pink_wool
+setblock ~33 ~4 ~41 minecraft:redstone_wire
+setblock ~34 ~2 ~41 minecraft:pink_wool
+setblock ~34 ~3 ~41 minecraft:redstone_wire
+setblock ~35 ~1 ~41 minecraft:pink_wool
+setblock ~35 ~2 ~41 minecraft:redstone_wire
+setblock ~35 ~0 ~42 minecraft:pink_wool
+setblock ~35 ~1 ~42 minecraft:redstone_wire

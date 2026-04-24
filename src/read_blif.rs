@@ -1,13 +1,12 @@
 use std::{
-    collections::HashMap, fmt::{Display, Formatter, Result}, fs,
+    collections::HashMap, fmt::{Display, Formatter, Result},
     path::{self, Path}
 };
 use blif_parser::*;
 use petgraph::{Directed, graph::{self, NodeIndex}, visit::EdgeRef};
-use petgraph::dot::Dot;
 use primitives::ParsedPrimitive;
 
-use crate::{mcfunction, timberwolf};
+use crate::{timberwolf, points};
 
 // TODO: load this info from a data file that is also used to generate mc.lib
 const INPUT_PIN_NAMES: [&'static str; 4] = ["A", "B", "C", "D"];
@@ -68,7 +67,8 @@ struct Module {
 }
 
 #[allow(unused_variables)]
-pub fn read_blif(blif_path: &Path, placement_algo: PlacementAlgo) -> (Vec<mcfunction::Gate>, Vec<mcfunction::Wire>) {
+pub fn read_blif(blif_path: &Path, placement_algo: PlacementAlgo, connect_io: bool)
+        -> (Vec<points::Gate>, Vec<points::Wire>) {
     let binding = path::absolute(blif_path).unwrap().into_os_string();
     let full_path = binding.to_str().unwrap();
 
@@ -87,6 +87,7 @@ pub fn read_blif(blif_path: &Path, placement_algo: PlacementAlgo) -> (Vec<mcfunc
                 if first_module_name == None {
                     first_module_name = Some(name.clone())
                 }
+                println!("Found module definition for {name}");
                 modules.insert(name.clone(), Module { name: name.clone(), inputs, outputs, elems, inst_count: 0 });
             },
             _ => println!("Warning: Not Implemented: Top-level non-module primitive")
@@ -100,18 +101,17 @@ pub fn read_blif(blif_path: &Path, placement_algo: PlacementAlgo) -> (Vec<mcfunc
     add_module_to_graph(&first_module_name.unwrap(), &modules, &mut graph, &mut nets, net_aliases);
 
     // Draw circuit as SVG graph
-    println!("\n--- Writing graph to SVG ---");
+    /*println!("\n--- Writing graph to SVG ---");
     let graph_dot_str = Dot::new(&graph).to_string();
     println!("{graph_dot_str}");
     let format = graphviz_rust::cmd::Format::Svg;
     let graph_svg = graphviz_rust::exec_dot(graph_dot_str, vec![format.into()]).unwrap();
     let stem = blif_path.file_stem().unwrap().to_str().unwrap();
-    fs::write(format!("res/graphs/graph_{stem}.svg"), graph_svg).expect("Writing SVG to file:");
+    fs::write(format!("res/graphs/graph_{stem}.svg"), graph_svg).expect("Writing SVG to file:");*/
 
     // Place gates & get wire target endpoints
-    let gate_info = mcfunction::read_gate_info();
-    let gates_map = place_gates(&graph, &gate_info, placement_algo);
-    let wires = get_wires(&graph, &gates_map, &gate_info);
+    let gates_map = place_gates(&graph, placement_algo);
+    let wires = get_wires(&graph, &gates_map, connect_io);
     let gates = gates_map.into_values().collect();
 
     return (gates, wires);
@@ -128,6 +128,7 @@ fn add_module_to_graph(
 
     let module = modules.get(module_name).unwrap();
     let mut local_net_aliases: HashMap<String, String> = HashMap::new();
+    print_blif_components(&module.elems);
     for parsed_primitive in module.elems.iter() {
         match parsed_primitive {
             ParsedPrimitive::Subckt { name: subckt_name, conns } => {
@@ -216,16 +217,16 @@ fn add_module_to_graph(
 
 fn place_gates(
     graph: &graph::Graph<Node, String, Directed>,
-    gate_info: &HashMap<String, mcfunction::GateInfo>,
     placement_algo: PlacementAlgo
-) -> HashMap<NodeIndex, mcfunction::Gate> {
-    let mut gates: HashMap<NodeIndex, mcfunction::Gate> = HashMap::new();
+) -> HashMap<NodeIndex, points::Gate> {
+    let mut gates: HashMap<NodeIndex, points::Gate> = HashMap::new();
+    let gate_dict = points::get_gate_dict();
 
     match placement_algo {
         PlacementAlgo::DumbGrid { num_cols } => {
-            const CELL_PADDING: i32 = 1;
+            const CELL_PADDING: i32 = 4;
             let mut cell_size = 0;
-            for (_, gate_info) in gate_info {
+            for (_, gate_info) in gate_dict {
                 if gate_info.z_dim > cell_size {
                     cell_size = gate_info.z_dim;
                 }
@@ -244,10 +245,11 @@ fn place_gates(
                     NodeType::Gate => {
                         gates.insert(
                             node_idx,
-                            mcfunction::Gate {
+                            points::Gate {
                                 name: node_weight.name.clone(),
                                 z: col_idx * cell_size + CELL_PADDING,
-                                x: row_idx * cell_size + CELL_PADDING
+                                y: 0,
+                                x: row_idx * cell_size + CELL_PADDING,
                             }
                         );
                         col_idx += 1;
@@ -261,7 +263,7 @@ fn place_gates(
             }
         },
         PlacementAlgo::TimberWolf => {
-            gates = timberwolf::anneal(graph, gate_info, timberwolf::LoggingRules::ALWAYS | timberwolf::LoggingRules::TO_FILE | timberwolf::LoggingRules::TO_GRAPH | timberwolf::LoggingRules::TO_CSV);
+            gates = timberwolf::anneal(graph, gate_dict, timberwolf::LoggingRules::ALWAYS | timberwolf::LoggingRules::TO_FILE | timberwolf::LoggingRules::TO_GRAPH | timberwolf::LoggingRules::TO_CSV);
         }
     }
 
@@ -270,10 +272,11 @@ fn place_gates(
 
 pub fn get_wires(
     graph: &graph::Graph<Node, String, Directed>,
-    gates: &HashMap<NodeIndex, mcfunction::Gate>,
-    gate_info: &HashMap<String, mcfunction::GateInfo>
-) -> Vec<mcfunction::Wire> {
-    let mut wires: Vec<mcfunction::Wire> = vec![];
+    gates: &HashMap<NodeIndex, points::Gate>,
+    connect_io: bool
+) -> Vec<points::Wire> {
+    let mut wires: Vec<points::Wire> = vec![];
+    let gate_dict = points::get_gate_dict();
 
     let mut input_idx = 0;
     let mut output_idx = 0;
@@ -282,20 +285,22 @@ pub fn get_wires(
         let node_weight = graph.node_weight(node_idx).unwrap();
         match node_weight.node_type {
             NodeType::Net => {
-                let mut start: Option<mcfunction::LabeledPoint> = None;
+                let mut start: Option<points::LabeledPoint> = None;
                 for edge in graph.edges_directed(node_idx, petgraph::Direction::Incoming) {
                     let source_gate_meta = gates.get(&edge.source()).unwrap();
-                    let source_gate_info = gate_info.get(&source_gate_meta.name).unwrap();
+                    let source_gate_info = gate_dict.get(&source_gate_meta.name).unwrap();
                     let source_pin_offset = source_gate_info.outputs.get(edge.weight()).unwrap();
-                    start = Some(mcfunction::LabeledPoint {
+                    start = Some(points::LabeledPoint {
                         x: source_gate_meta.x + source_pin_offset.x,
                         z: source_gate_meta.z + source_pin_offset.z,
-                        y: -1,
+                        y: 0,
                         label: Some(format!("{} -> {}", edge.weight(), node_weight.name))
                     });
                 }
-                if start.is_none() {
-                    start = Some(mcfunction::LabeledPoint {
+                if start.is_none() && connect_io {
+                    // Only set start for circuit inputs if we're connecting IO
+                    // Otherwise leave it as None for later
+                    start = Some(points::LabeledPoint {
                         x: -4,
                         z: input_idx * 2,
                         y: 0,
@@ -304,34 +309,43 @@ pub fn get_wires(
                     input_idx += 1;
                 }
 
-                let mut ends: Vec<mcfunction::LabeledPoint> = vec![];
+                let mut ends: Vec<points::LabeledPoint> = vec![];
                 for edge in graph.edges_directed(node_idx, petgraph::Direction::Outgoing) {
                     let target_gate_meta = gates.get(&edge.target()).unwrap();
-                    let target_gate_info = gate_info.get(&target_gate_meta.name).unwrap();
+                    let target_gate_info = gate_dict.get(&target_gate_meta.name).unwrap();
                     let target_pin_offset = target_gate_info.inputs.get(edge.weight()).unwrap();
-                    ends.push(mcfunction::LabeledPoint {
+                    ends.push(points::LabeledPoint {
                         x: target_gate_meta.x + target_pin_offset.x,
                         z: target_gate_meta.z + target_pin_offset.z,
-                        y: -1,
+                        y: 0,
                         label: Some(format!("{} -> {}", node_weight.name, edge.weight()))
                     });
                 }
                 if ends.len() == 0 {
-                    ends.push(mcfunction::LabeledPoint {
-                        x: -6,
-                        z: output_idx * 2,
-                        y: 0,
-                        label: Some(node_weight.name.clone())
-                    });
-                    output_idx += 1;
+                    if connect_io {
+                        ends.push(points::LabeledPoint {
+                            x: -6,
+                            z: output_idx * 2,
+                            y: 0,
+                            label: Some(node_weight.name.clone())
+                        });
+                        output_idx += 1;
+                    }
+                    else {
+                        // Ignore circuit output wires if we're not connecting IO
+                        continue;
+                    }
+                }
+                else if ends.len() >= 2 && start.is_none() {
+                    // If we're not connecting IO to a console, we should still connect
+                    //  the ends of multi-ended circuit input wires
+                    start = ends.pop();
                 }
 
-                for end in ends {
-                    wires.push(mcfunction::Wire {
-                        start: start.clone().unwrap(),
-                        end: end
-                    });
-                }
+                wires.push(points::Wire {
+                    start: start.clone().unwrap(),
+                    ends: ends
+                });
             },
             _ => { }  // No other nodes included in routing
         }
@@ -342,7 +356,7 @@ pub fn get_wires(
 
 // Print blif file items
 #[allow(unused_variables,unused)]
-fn print_blif_components(list: Vec<ParsedPrimitive>) {
+fn print_blif_components(list: &Vec<ParsedPrimitive>) {
     for x in list.into_iter() {
         match x {
             ParsedPrimitive::NOP => println!("NOP"),
@@ -377,8 +391,8 @@ fn print_blif_components(list: Vec<ParsedPrimitive>) {
                 println!("c: {}", c);
                 println!("d: {}", d);
                 println!("q: {}", q);
-                println!("r: {}", r.unwrap());
-                println!("e: {}", e.unwrap());
+                println!("r: {}", r.clone().unwrap());
+                println!("e: {}", e.clone().unwrap());
             }
 
             ParsedPrimitive::Latch {

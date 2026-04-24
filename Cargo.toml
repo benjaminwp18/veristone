@@ -10,6 +10,7 @@ petgraph = "0.8.3"
 rand = "0.9.2"
 serde_json = "1.0.145"
 serde = "1.0.228"
+impl_ops = "0.1.1"
 
 # (theoretically optional) For visualization of intermediate representations
 graphviz-rust = "0.9.6"
@@ -20,4 +21,5 @@ csv = "1.4.0"
 
 [patch.crates-io]
 # Enable support for Windows line endings (\r\n)
-blif-parser = { git = 'https://github.com/benjaminwp18/blif-parser.git' }
+# TODO: latest commit on this fork breaks support; fix on the fork
+blif-parser = { git = 'https://github.com/benjaminwp18/blif-parser.git', rev = "2e94711e10d73136c1291e0aa85bd58e5a66be83" }
