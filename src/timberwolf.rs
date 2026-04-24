@@ -323,7 +323,7 @@ fn cost(
     cost += BOUND_COST_WEIGHT * bound_cost as f32;
 
     // TEIC: Total Estimated Interconnect Cost (summative wire length)
-    let wires = read_blif::get_wires(graph, state, false);
+    let (wires, _, _) = read_blif::get_wires(graph, state, false);
     let mut tei_cost = 0;
     for wire in wires {
         for end in wire.ends {

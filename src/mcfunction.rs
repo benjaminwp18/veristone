@@ -29,6 +29,8 @@ pub fn write_mcfunction(
     wires: &Vec<points::Wire>,
     gate_placement_rules: &Vec<GateRule>,
     routing_algo: RoutingAlgo,
+    inputs: &Vec<points::LabeledPoint>,
+    outputs: &Vec<points::LabeledPoint>
 ) -> Result<(), Box<dyn std::error::Error>> {
     println!("\n\n=== MCFUNCTION ===\n");
 
@@ -56,7 +58,29 @@ pub fn write_mcfunction(
 
     match routing_algo {
         RoutingAlgo::Lee(settings) => {
-            lee::lee(&mut file, &settings, gates, wires)?
+            lee::lee(&mut file, &settings, gates, wires)?;
+
+            for input in inputs {
+                writeln!(file, "setblock ~{} ~{} ~{} minecraft:redstone_lamp", input.x, input.y - 1, input.z).expect(FILE_ERROR);
+                writeln!(file, "setblock ~{} ~{} ~{} minecraft:lever[face=wall,facing=west]", input.x - 1, input.y - 1, input.z).expect(FILE_ERROR);
+                writeln!(file, "summon minecraft:armor_stand ~{} ~{} ~{} {{Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: \"[IN] {}\"}}", (input.x as f32) + 0.5, input.y + 1, (input.z as f32) + 0.5, input.label.as_ref().unwrap()).expect(FILE_ERROR);
+            }
+
+            for output in outputs {
+                writeln!(file, "setblock ~{} ~{} ~{} minecraft:redstone_lamp", output.x, output.y - 1, output.z).expect(FILE_ERROR);
+                writeln!(file, "summon minecraft:armor_stand ~{} ~{} ~{} {{Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: \"[OUT] {}\"}}", (output.x as f32) + 0.5, output.y + 1, (output.z as f32) + 0.5, output.label.as_ref().unwrap()).expect(FILE_ERROR);
+            }
+
+            // for wire in wires {
+            //     if wire.start.label.is_some() {
+            //         writeln!(file, "summon minecraft:armor_stand ~{} ~{} ~{} {{Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: \"{}\"}}", (wire.start.x as f32) + 0.5, wire.start.y + 1, (wire.start.z as f32) + 0.5, wire.start.label.as_ref().unwrap()).expect(FILE_ERROR);
+            //     }
+            //     for end in &wire.ends {
+            //         if end.label.is_some() {
+            //             writeln!(file, "summon minecraft:armor_stand ~{} ~{} ~{} {{Invisible: 1b, NoGravity: 1b, Marker: 1b, CustomNameVisible: 1b, CustomName: \"{}\"}}", (end.x as f32) + 0.5, end.y + 1, (end.z as f32) + 0.5, end.label.as_ref().unwrap()).expect(FILE_ERROR);
+            //         }
+            //     }
+            // }
         },
         RoutingAlgo::Wireless => {
             for wire in wires {

@@ -68,7 +68,7 @@ struct Module {
 
 #[allow(unused_variables)]
 pub fn read_blif(blif_path: &Path, placement_algo: PlacementAlgo, connect_io: bool)
-        -> (Vec<points::Gate>, Vec<points::Wire>) {
+        -> (Vec<points::Gate>, Vec<points::Wire>, Vec<points::LabeledPoint>, Vec<points::LabeledPoint>) {
     let binding = path::absolute(blif_path).unwrap().into_os_string();
     let full_path = binding.to_str().unwrap();
 
@@ -111,10 +111,10 @@ pub fn read_blif(blif_path: &Path, placement_algo: PlacementAlgo, connect_io: bo
 
     // Place gates & get wire target endpoints
     let gates_map = place_gates(&graph, placement_algo);
-    let wires = get_wires(&graph, &gates_map, connect_io);
+    let (wires, inputs, outputs) = get_wires(&graph, &gates_map, connect_io);
     let gates = gates_map.into_values().collect();
 
-    return (gates, wires);
+    return (gates, wires, inputs, outputs);
 }
 
 fn add_module_to_graph(
@@ -274,8 +274,10 @@ pub fn get_wires(
     graph: &graph::Graph<Node, String, Directed>,
     gates: &HashMap<NodeIndex, points::Gate>,
     connect_io: bool
-) -> Vec<points::Wire> {
+) -> (Vec<points::Wire>, Vec<points::LabeledPoint>, Vec<points::LabeledPoint>) {
     let mut wires: Vec<points::Wire> = vec![];
+    let mut inputs: Vec<points::LabeledPoint> = vec![];
+    let mut outputs: Vec<points::LabeledPoint> = vec![];
     let gate_dict = points::get_gate_dict();
 
     let mut input_idx = 0;
@@ -292,20 +294,22 @@ pub fn get_wires(
                     let source_pin_offset = source_gate_info.outputs.get(edge.weight()).unwrap();
                     start = Some(points::LabeledPoint {
                         x: source_gate_meta.x + source_pin_offset.x,
+                        y: source_gate_meta.y + source_pin_offset.y,
                         z: source_gate_meta.z + source_pin_offset.z,
-                        y: 0,
                         label: Some(format!("{} -> {}", edge.weight(), node_weight.name))
                     });
                 }
                 if start.is_none() && connect_io {
                     // Only set start for circuit inputs if we're connecting IO
                     // Otherwise leave it as None for later
-                    start = Some(points::LabeledPoint {
+                    let start_point = points::LabeledPoint {
                         x: -4,
                         z: input_idx * 2,
                         y: 0,
                         label: Some(node_weight.name.clone())
-                    });
+                    };
+                    inputs.push(start_point.clone());
+                    start = Some(start_point);
                     input_idx += 1;
                 }
 
@@ -316,23 +320,27 @@ pub fn get_wires(
                     let target_pin_offset = target_gate_info.inputs.get(edge.weight()).unwrap();
                     ends.push(points::LabeledPoint {
                         x: target_gate_meta.x + target_pin_offset.x,
+                        y: target_gate_meta.y + target_pin_offset.y,
                         z: target_gate_meta.z + target_pin_offset.z,
-                        y: 0,
                         label: Some(format!("{} -> {}", node_weight.name, edge.weight()))
                     });
                 }
                 if ends.len() == 0 {
                     if connect_io {
-                        ends.push(points::LabeledPoint {
+                        let end_point = points::LabeledPoint {
                             x: -6,
                             z: output_idx * 2,
                             y: 0,
                             label: Some(node_weight.name.clone())
-                        });
+                        };
+                        outputs.push(end_point.clone());
+                        ends.push(end_point);
                         output_idx += 1;
                     }
                     else {
                         // Ignore circuit output wires if we're not connecting IO
+                        // Assumes wires with no ends will have a start
+                        outputs.push(start.clone().unwrap());
                         continue;
                     }
                 }
@@ -340,6 +348,7 @@ pub fn get_wires(
                     // If we're not connecting IO to a console, we should still connect
                     //  the ends of multi-ended circuit input wires
                     start = ends.pop();
+                    inputs.push(start.clone().unwrap());
                 }
 
                 wires.push(points::Wire {
@@ -351,7 +360,7 @@ pub fn get_wires(
         }
     }
 
-    return wires;
+    return (wires, inputs, outputs);
 }
 
 // Print blif file items
