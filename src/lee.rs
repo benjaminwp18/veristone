@@ -156,7 +156,7 @@ pub fn lee(file: &mut File, settings: &LeeSettings, gates: &Vec<points::Gate>, w
         let mut idxs_to_visit: Vec<usize> = vec![0];
         while !idxs_to_visit.is_empty() {
             let cur_idx = idxs_to_visit.pop().unwrap();
-            println!("Visiting {:?} w/strength={}", &tree[cur_idx].point, &tree[cur_idx].signal_strength);
+            // println!("Visiting {:?} w/strength={}", &tree[cur_idx].point, &tree[cur_idx].signal_strength);
 
             for delta in points::CONNECTED_WIRE_NEIGHBORHOOD {
                 let neighbor = delta + &tree[cur_idx].point;
@@ -200,7 +200,7 @@ fn write_commands_for_segment(file: &mut File, tree: &mut Vec<RedstoneSegment>, 
     place_redstone_wire(file, &tree[cur_idx].point)?;
 
     if tree[cur_idx].signal_strength == 0 {
-        println!("Writing repeater at {:?}", tree[cur_idx].point);
+        // println!("Writing repeater at {:?}", tree[cur_idx].point);
         let mut repeater_idx = cur_idx;
         while try_add_repeater(file, tree, repeater_idx).is_err() {
             match tree[repeater_idx].parent {
@@ -223,7 +223,7 @@ fn write_commands_for_segment(file: &mut File, tree: &mut Vec<RedstoneSegment>, 
         }
     }
     else {
-        println!("Writing redstone at {:?}", tree[cur_idx].point);
+        // println!("Writing redstone at {:?}", tree[cur_idx].point);
         // TODO: verticality
     }
 
@@ -368,7 +368,7 @@ fn route_wire(initial_grid: &grid::Grid, wire: &points::Wire) -> Result<points::
         }
     }
 
-    println!("{temp_grid}");
+    // println!("{temp_grid}");
 
     let mut route = points::Route { points: vec![], wire: wire.clone() };
 
@@ -389,7 +389,7 @@ fn route_wire(initial_grid: &grid::Grid, wire: &points::Wire) -> Result<points::
         let mut current_value = temp_grid.get(&current)?;
         println!("Backtracking from {}, {}, {}", current.x, current.y, current.z);
         'backtrack_loop: while !current.compare(&wire_start) && !temp_grid.matches(&current, |v| v == TEMP_WIRE_PREV_BRANCH) {
-            println!("Current: {current:?} = {current_value}");
+            // println!("Current: {current:?} = {current_value}");
 
             // TODO: this gradient shifting is a local DFS to become less picky when we get stuck,
             //       and it can produce some seriously inefficient paths

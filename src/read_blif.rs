@@ -1,9 +1,8 @@
 use std::{
-    collections::HashMap, fmt::{Display, Formatter, Result},
-    path::{self, Path}
+    collections::HashMap, fmt::{Display, Formatter, Result}, fs, path::{self, Path}
 };
 use blif_parser::*;
-use petgraph::{Directed, graph::{self, NodeIndex}, visit::EdgeRef};
+use petgraph::{Directed, dot::Dot, graph::{self, NodeIndex}, visit::EdgeRef};
 use primitives::ParsedPrimitive;
 
 use crate::{timberwolf, points};
@@ -101,13 +100,13 @@ pub fn read_blif(blif_path: &Path, placement_algo: PlacementAlgo, connect_io: bo
     add_module_to_graph(&first_module_name.unwrap(), &modules, &mut graph, &mut nets, net_aliases);
 
     // Draw circuit as SVG graph
-    /*println!("\n--- Writing graph to SVG ---");
+    println!("\n--- Writing graph to SVG ---");
     let graph_dot_str = Dot::new(&graph).to_string();
-    println!("{graph_dot_str}");
+    // println!("{graph_dot_str}");
     let format = graphviz_rust::cmd::Format::Svg;
     let graph_svg = graphviz_rust::exec_dot(graph_dot_str, vec![format.into()]).unwrap();
     let stem = blif_path.file_stem().unwrap().to_str().unwrap();
-    fs::write(format!("res/graphs/graph_{stem}.svg"), graph_svg).expect("Writing SVG to file:");*/
+    fs::write(format!("res/graphs/graph_{stem}.svg"), graph_svg).expect("Writing SVG to file:");
 
     // Place gates & get wire target endpoints
     let gates_map = place_gates(&graph, placement_algo);
@@ -128,7 +127,7 @@ fn add_module_to_graph(
 
     let module = modules.get(module_name).unwrap();
     let mut local_net_aliases: HashMap<String, String> = HashMap::new();
-    print_blif_components(&module.elems);
+    // print_blif_components(&module.elems);
     for parsed_primitive in module.elems.iter() {
         match parsed_primitive {
             ParsedPrimitive::Subckt { name: subckt_name, conns } => {

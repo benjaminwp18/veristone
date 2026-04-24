@@ -1,8 +1,8 @@
-place template logic:xor_gate ~14 ~ ~11
 place template logic:or_gate ~4 ~ ~36
+place template logic:xor_gate ~12 ~ ~22
+place template logic:xor_gate ~14 ~ ~11
 place template logic:and_gate ~13 ~ ~32
 place template logic:and_gate ~3 ~ ~24
-place template logic:xor_gate ~12 ~ ~22
 setblock ~5 ~0 ~28 minecraft:white_wool
 setblock ~5 ~1 ~28 minecraft:redstone_wire
 setblock ~5 ~0 ~29 minecraft:white_wool
