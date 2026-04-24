@@ -1,6 +1,9 @@
 target/
 
+*.log
 *.svg
+
+# MacOS
 .DS_Store
 
 # Windows uses OSS CAD Suite to get Yosys binaries

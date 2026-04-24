@@ -1,6 +1,5 @@
 use clap::Parser;
-
-use veristone::mcfunction;
+// use veristone::points;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -13,37 +12,42 @@ struct Args {
 fn main() {
     // let args: Args = Args::parse();
     // let path = Path::new(&args.src);
-    let and_gate = mcfunction::Gate {
-        name: String::from("and"),
-        x: 0,
-        z: 0
-    };
-    let not_gate: mcfunction::Gate = mcfunction::Gate {
-        name: String::from("not"),
-        x: 0,
-        z: 8
-    };
-    let gates: Vec<mcfunction::Gate> = vec![
-        and_gate,
-        not_gate
-    ];
+    // let and_gate = points::Gate {
+    //     name: String::from("and"),
+    //     x: 0,
+    //     z: 0,
+    //     y: 0
+    // };
+    // let not_gate: points::Gate = points::Gate {
+    //     name: String::from("not"),
+    //     x: 0,
+    //     z: 8,
+    //     y: 0
+    // };
+    // let gates: Vec<points::Gate> = vec![
+    //     and_gate,
+    //     not_gate
+    // ];
 
-    let wires: Vec<mcfunction::Wire> = vec![
-        mcfunction::Wire {
-            start: mcfunction::LabeledPoint {
-                x: 1,
-                z: 4,
-                y: 0,
-                label: Some("start".to_string())
-            },
-            end: mcfunction::LabeledPoint {
-                x: 0,
-                z: 7,
-                y: 0,
-                label: Some("end".to_string())
-            }
-        }
-    ];
+    // let wires: Vec<points::Wire> = vec![
+    //     points::Wire {
+    //         start: points::LabeledPoint {
+    //             x: 1,
+    //             z: 4,
+    //             y: 0,
+    //             label: Some("start".to_string())
+    //         },
+    //         ends: vec![
+    //             points::LabeledPoint {
+    //                 x: 0,
+    //                 z: 7,
+    //                 y: 0,
+    //                 label: Some("end".to_string())
+    //             }
+    //         ]
+    //     }
+    // ];
 
-    mcfunction::write_mcfunction(&gates, &wires, mcfunction::RoutingAlgo::Wireless);
+    // mcfunction::write_mcfunction(&gates, &wires, &vec![mcfunction::GateRule::Template], mcfunction::RoutingAlgo::Wireless).unwrap();
+    panic!("This binary needs updating to provide inputs & outputs");
 }
