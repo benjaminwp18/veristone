@@ -81,6 +81,18 @@ impl Point {
     pub fn compare(&self, point: &Point) -> bool {
         self.x == point.x && self.y == point.y && self.z == point.z
     }
+
+    pub fn dx(&self, delta_x: i32) -> Point {
+        Point::new(self.x + delta_x, self.y, self.z)
+    }
+
+    pub fn dy(&self, delta_y: i32) -> Point {
+        Point::new(self.x, self.y + delta_y, self.z)
+    }
+
+    pub fn dz(&self, delta_z: i32) -> Point {
+        Point::new(self.x, self.y, self.z + delta_z)
+    }
 }
 
 #[derive(Clone, Debug)]

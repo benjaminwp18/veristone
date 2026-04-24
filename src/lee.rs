@@ -4,6 +4,7 @@ use std::collections::{
     BinaryHeap, VecDeque
 };
 
+use crate::grid::cell::TEMP_WIRE_PREV_BRANCH;
 use crate::{mcfunction, points, grid};
 
 const MAX_SIGNAL_STRENGTH: u8 = 15;
@@ -135,6 +136,8 @@ pub fn lee(file: &mut File, settings: &LeeSettings, gates: &Vec<points::Gate>, w
         }
     }
 
+    println!("{final_grid}");
+
     // Place blocks in the world for each route
     for route in routes {
         let mut tree: Vec<RedstoneSegment> = vec![];
@@ -153,7 +156,7 @@ pub fn lee(file: &mut File, settings: &LeeSettings, gates: &Vec<points::Gate>, w
         let mut idxs_to_visit: Vec<usize> = vec![0];
         while !idxs_to_visit.is_empty() {
             let cur_idx = idxs_to_visit.pop().unwrap();
-            println!("Visiting {:?}", &tree[cur_idx].point);
+            println!("Visiting {:?} w/strength={}", &tree[cur_idx].point, &tree[cur_idx].signal_strength);
 
             for delta in points::CONNECTED_WIRE_NEIGHBORHOOD {
                 let neighbor = delta + &tree[cur_idx].point;
@@ -192,6 +195,10 @@ pub fn lee(file: &mut File, settings: &LeeSettings, gates: &Vec<points::Gate>, w
 }
 
 fn write_commands_for_segment(file: &mut File, tree: &mut Vec<RedstoneSegment>, cur_idx: usize) -> Result<(), Box<dyn std::error::Error>> {
+    // Always start with redstone
+    // Even if we write a repeater, it might be on another block if it can't fit here
+    place_redstone_wire(file, &tree[cur_idx].point)?;
+
     if tree[cur_idx].signal_strength == 0 {
         println!("Writing repeater at {:?}", tree[cur_idx].point);
         let mut repeater_idx = cur_idx;
@@ -218,7 +225,6 @@ fn write_commands_for_segment(file: &mut File, tree: &mut Vec<RedstoneSegment>, 
     else {
         println!("Writing redstone at {:?}", tree[cur_idx].point);
         // TODO: verticality
-        place_redstone_wire(file, &tree[cur_idx].point)?;
     }
 
     Ok(())
@@ -326,9 +332,9 @@ fn route_wire(initial_grid: &grid::Grid, wire: &points::Wire) -> Result<points::
         let current: points::Point = points_to_check.pop_front().unwrap();
         // println!("Getting @ {current:?}");
         if at_start {
-            // Distance to start is 0 when at start
+            // Distance to start is minimum when at start
             // (even though start is on a gate, so its value is -1)
-            current_distance = 0;
+            current_distance = grid::cell::BASE_LEE_FLOOD;
             at_start = false;
         }
         else {
@@ -337,17 +343,19 @@ fn route_wire(initial_grid: &grid::Grid, wire: &points::Wire) -> Result<points::
         // println!("Current dist: {current_distance}");
 
         // Check if the current point is one of the wire ends
-        match ends_to_reach.iter()
-                .position(|end| current.compare(end)) {
-            Some(idx) => {
-                ends_to_reach.swap_remove(idx);
-                if ends_to_reach.len() == 0 {
-                    // Stop searching if we've reached all wire ends
-                    break;
-                }
-            },
-            None => {}
-        }
+        // Disabled to give a better chance of finding alternate routes to avoid
+        //  breaking lines with diagonals
+        // match ends_to_reach.iter()
+        //         .position(|end| current.compare(end)) {
+        //     Some(idx) => {
+        //         ends_to_reach.swap_remove(idx);
+        //         if ends_to_reach.len() == 0 {
+        //             // Stop searching if we've reached all wire ends
+        //             break;
+        //         }
+        //     },
+        //     None => {}
+        // }
 
         // Add adjacent points to queue if they're empty
         for delta in points::CONNECTED_WIRE_NEIGHBORHOOD {
@@ -367,32 +375,80 @@ fn route_wire(initial_grid: &grid::Grid, wire: &points::Wire) -> Result<points::
     // Work backward from end point back to start &
     // edit final_grid to set final wire positions
     for end in wire_ends {
+        // Mark previous branches as targets
+        for i in (0..route.points.len()).rev() {
+            if temp_grid.matches(&route.points[i], |v| v == grid::cell::TEMP_WIRE_PREV_BRANCH) {
+                break;
+            }
+            else {
+                temp_grid.set(&route.points[i], grid::cell::TEMP_WIRE_PREV_BRANCH).unwrap();
+            }
+        }
+
         let mut current = end.clone();
         let mut current_value = temp_grid.get(&current)?;
         println!("Backtracking from {}, {}, {}", current.x, current.y, current.z);
-        'backtrack_loop: while !current.compare(&wire_start) {
+        'backtrack_loop: while !current.compare(&wire_start) && !temp_grid.matches(&current, |v| v == TEMP_WIRE_PREV_BRANCH) {
             println!("Current: {current:?} = {current_value}");
 
-            for delta in points::CONNECTED_WIRE_NEIGHBORHOOD {
-                let neighbor = &current + delta;
-                if neighbor.compare(&wire_start) ||
-                    temp_grid.get(&neighbor).is_ok_and(|neighbor_value|
-                        grid::cell::is_lee_floodfill(neighbor_value) &&  // Don't go to gates/other wires
-                        (neighbor_value < current_value ||  // Follow gradient down...
-                         grid::cell::is_blocked(current_value))  // ...or get off a gate if we're sitting on one
-                    )
-                {
-                    // We're leaving current, add it to the route
-                    if !current.compare(&end) {
-                        // Don't add ends, they're inside gates (they're the pin blocks)
-                        route.points.push(current);
-                    }
+            // TODO: this gradient shifting is a local DFS to become less picky when we get stuck,
+            //       and it can produce some seriously inefficient paths
+            let mut has_worse_options = false;
+            let mut gradient_shift = 0;
+            while gradient_shift == 0 || has_worse_options {
+                for delta in points::CONNECTED_WIRE_NEIGHBORHOOD {
+                    let neighbor = &current + delta;
+                    if neighbor.compare(&wire_start) ||
+                        temp_grid.matches(&neighbor, |neighbor_value|
+                            // Don't go to gates/other wires
+                            grid::cell::is_lee_floodfill(neighbor_value) ||
+                            neighbor_value == grid::cell::TEMP_WIRE_PREV_BRANCH
+                        )
+                    {
+                        if !temp_grid.matches(&neighbor, |neighbor_value|
+                            neighbor_value < current_value + gradient_shift ||  // Follow gradient down...
+                            grid::cell::is_blocked(current_value)  // ...or get off a gate if we're sitting on one
+                        ) {
+                            has_worse_options = true;
+                        }
+                        else if ////// Conditions to avoid conflicting with yourself or another branch of the current wire //////
+                            // Don't break/get broken by support blocks directly under wires
+                            !temp_grid.matches(&neighbor.dy(1), grid::cell::is_temp_wire) &&
+                            !temp_grid.matches(&neighbor.dy(-1), grid::cell::is_temp_wire) &&
+                            (  // Don't scrape the bottom of wires while going up
+                                !temp_grid.matches(&current.dy(2), grid::cell::is_temp_wire) ||
+                                delta.y != 1
+                            ) &&
+                            (  // Don't scrape the bottom of wires while going down
+                                !temp_grid.matches(&neighbor.dy(2), grid::cell::is_temp_wire) ||
+                                delta.y != -1
+                            ) &&
+                            (  // Don't break existing diagonal wires below you
+                                !temp_grid.matches(&neighbor.dy(-2), grid::cell::is_temp_wire) ||
+                                [neighbor.dy(-1).dx(1), neighbor.dy(-1).dx(1), neighbor.dy(-1).dz(1), neighbor.dy(-1).dz(1)]
+                                    .map(|point| !temp_grid.matches(&point, grid::cell::is_temp_wire)).iter().all(|safe| *safe)
+                            )
+                        {
+                            // We're leaving current, add it to the route
+                            if !current.compare(&end) {
+                                // Don't add ends, they're inside gates (they're the pin blocks)
+                                route.points.push(current);
+                            }
 
-                    // Move to neighbor
-                    current = neighbor;
-                    current_value = temp_grid.get(&current)?;
-                    continue 'backtrack_loop;
+                            // Move to neighbor
+                            current = neighbor;
+                            current_value = temp_grid.get(&current).unwrap();
+                            if !temp_grid.matches(&current, |v| v == grid::cell::TEMP_WIRE_PREV_BRANCH) {
+                                temp_grid.set(&current, grid::cell::TEMP_WIRE_CUR_BRANCH).unwrap();
+                            }
+                            continue 'backtrack_loop;
+                        }
+                    }
                 }
+
+                // Continue 'backtrack_loop wasn't called, so no legal neighbor was found
+                // Try again with more permissive gradient rules
+                gradient_shift += 1;
             }
 
             return Err("Failed to backtrack in Lee routing")?;

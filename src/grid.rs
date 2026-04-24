@@ -31,6 +31,9 @@ pub mod cell {
     pub static INTERSECTION_COST: i32 = 2;
 
     pub static EMPTY: i32 = 0;
+    pub static TEMP_WIRE_CUR_BRANCH: i32 = 1;
+    pub static TEMP_WIRE_PREV_BRANCH: i32 = 2;
+    pub static BASE_LEE_FLOOD: i32 = 3;
     pub static GATE: i32 = -1;
     pub static PIN_SKIRT: i32 = -2;
     pub static WIRE_BORDER: i32 = -3;
@@ -38,6 +41,10 @@ pub mod cell {
 
     pub fn is_blocked(grid_value: i32) -> bool {
         grid_value < EMPTY
+    }
+
+    pub fn is_temp_wire(grid_value: i32) -> bool {
+        grid_value == TEMP_WIRE_CUR_BRANCH || grid_value == TEMP_WIRE_PREV_BRANCH
     }
 
     pub fn is_wire(grid_value: i32) -> bool {
@@ -54,7 +61,7 @@ pub mod cell {
     }
 
     pub fn is_lee_floodfill(grid_value: i32) -> bool {
-        grid_value > EMPTY
+        grid_value >= BASE_LEE_FLOOD
     }
 }
 
@@ -112,6 +119,13 @@ impl Grid {
             -> Result<i32, Box<dyn std::error::Error>> {
         let grid_point = self.to_grid_point(point)?;
         Ok(self.grid[grid_point.x][grid_point.y][grid_point.z])
+    }
+
+    /**
+     * Point exists and matches the predicate
+     */
+    pub fn matches<F: FnOnce(i32) -> bool>(&self, point: &points::Point, predicate: F) -> bool {
+        self.get(&point).is_ok_and(predicate)
     }
 
     fn modify_skirt(&mut self, pin: &points::LabeledPoint, value_to_replace: i32, value_to_write: i32) {
