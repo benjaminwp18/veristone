@@ -115,6 +115,37 @@ impl Grid {
     }
 
     fn modify_skirt(&mut self, pin: &points::LabeledPoint, value_to_replace: i32, value_to_write: i32) {
+        // Double pin skirt cell => two pins need the cell free to avoid adjacencies
+        // ...so block off the cell completely by marking it as a gate (TODO: janky)
+        // Must be done before modifying skirts to avoid seeing your own in-progress skirt as a double
+        if value_to_write == cell::PIN_SKIRT {
+            for delta1 in points::REDSTONE_NEIGHBORHOOD {
+                let neighbor = delta1 + pin;
+
+                match self.get(&neighbor) {
+                    Ok(neighbor_value) => {
+                        if neighbor_value == cell::PIN_SKIRT {
+                            self.set(&neighbor, cell::GATE).unwrap();
+                        }
+
+                        for delta2 in points::REDSTONE_NEIGHBORHOOD {
+                            let grandneighbor = &neighbor + delta2;
+
+                            match self.get(&grandneighbor) {
+                                Ok(grandneighbor_value) => {
+                                    if grandneighbor_value == cell::PIN_SKIRT {
+                                        self.set(&grandneighbor, cell::GATE).unwrap();
+                                    }
+                                },
+                                Err(_) => {}
+                            }
+                        }
+                    },
+                    Err(_) => {}
+                }
+            }
+        }
+
         for delta1 in points::REDSTONE_NEIGHBORHOOD {
             let neighbor = delta1 + pin;
 

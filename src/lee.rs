@@ -15,6 +15,10 @@ mod repeater_directions {
     pub const TO_NEGATIVE_X: &str = "east";
 }
 
+const WIRE_SUPPORT_BLOCK_NAME: &str = "pink_wool";
+const WIRE_BLOCK_NAME: &str = "redstone_wire";
+const REPEATER_BLOCK_NAME: &str = "repeater";
+
 struct RedstoneSegment {
     parent: Option<usize>,
     delta_to_parent: points::Point,
@@ -134,8 +138,8 @@ pub fn lee(file: &mut File, settings: &LeeSettings, gates: &Vec<points::Gate>, w
     // Place blocks in the world for each route
     for route in routes {
         let mut tree: Vec<RedstoneSegment> = vec![];
-        println!("{final_grid}");
-        println!("{route:?}");
+        // println!("{final_grid}");
+        // println!("{route:?}");
         tree.push(
             RedstoneSegment {
                 parent: None,
@@ -149,7 +153,7 @@ pub fn lee(file: &mut File, settings: &LeeSettings, gates: &Vec<points::Gate>, w
         let mut idxs_to_visit: Vec<usize> = vec![0];
         while !idxs_to_visit.is_empty() {
             let cur_idx = idxs_to_visit.pop().unwrap();
-            println!("Visiting {:?}", &tree[cur_idx].point);
+            // println!("Visiting {:?}", &tree[cur_idx].point);
 
             for delta in points::REDSTONE_NEIGHBORHOOD {
                 let neighbor = delta + &tree[cur_idx].point;
@@ -279,20 +283,20 @@ fn try_add_repeater(file: &mut File, tree: &mut Vec<RedstoneSegment>, target_idx
 }
 
 fn place_redstone_wire(file: &mut File, point: &points::Point) -> Result<(), Box<dyn std::error::Error>> {
-    writeln!(file, "setblock ~{} ~{} ~{} minecraft:obsidian",
+    writeln!(file, "setblock ~{} ~{} ~{} minecraft:{WIRE_SUPPORT_BLOCK_NAME}",
              point.x, point.y - 1, point.z)
              .expect(mcfunction::FILE_ERROR);
-    writeln!(file, "setblock ~{} ~{} ~{} minecraft:redstone_wire",
+    writeln!(file, "setblock ~{} ~{} ~{} minecraft:{WIRE_BLOCK_NAME}",
              point.x, point.y, point.z)
              .expect(mcfunction::FILE_ERROR);
     Ok(())
 }
 
 fn place_repeater(file: &mut File, point: &points::Point, direction: &str) -> Result<(), Box<dyn std::error::Error>> {
-    writeln!(file, "setblock ~{} ~{} ~{} minecraft:obsidian",
+    writeln!(file, "setblock ~{} ~{} ~{} minecraft:{WIRE_SUPPORT_BLOCK_NAME}",
              point.x, point.y - 1, point.z)
              .expect(mcfunction::FILE_ERROR);
-    writeln!(file, "setblock ~{} ~{} ~{} minecraft:repeater[facing={}]",
+    writeln!(file, "setblock ~{} ~{} ~{} minecraft:{REPEATER_BLOCK_NAME}[facing={}]",
              point.x, point.y, point.z, direction)
              .expect(mcfunction::FILE_ERROR);
     Ok(())
@@ -344,7 +348,7 @@ fn route_wire(initial_grid: &grid::Grid, wire: &points::Wire) -> Result<points::
         }
 
         // Add adjacent points to queue if they're empty
-        for delta in points::REDSTONE_NEIGHBORHOOD {
+        for delta in points::CONNECTED_WIRE_NEIGHBORHOOD {
             let point = delta + &current;
             if temp_grid.get(&point).is_ok_and(|x| x == grid::cell::EMPTY) ||
                     ends_to_reach.contains(&point) {
@@ -367,7 +371,7 @@ fn route_wire(initial_grid: &grid::Grid, wire: &points::Wire) -> Result<points::
         'backtrack_loop: while !current.compare(&wire_start) {
             println!("Current: {current:?} = {current_value}");
 
-            for delta in points::REDSTONE_NEIGHBORHOOD {
+            for delta in points::CONNECTED_WIRE_NEIGHBORHOOD {
                 let neighbor = &current + delta;
                 if neighbor.compare(&wire_start) ||
                     temp_grid.get(&neighbor).is_ok_and(|neighbor_value|

@@ -14,6 +14,7 @@ pub const MANHATTEN_NEIGHBORHOOD: &[Point; 6] = &[
     Point::new( 0,  0, -1)
 ];
 
+// Adds diagonals (which are adjacent in redstone)
 pub const REDSTONE_NEIGHBORHOOD: &[Point; 14] = &[
     Point::new( 1,  0,  0),
     Point::new(-1,  0,  0),
@@ -24,6 +25,23 @@ pub const REDSTONE_NEIGHBORHOOD: &[Point; 14] = &[
 
     Point::new( 0,  1,  0),
     Point::new( 0, -1,  0),
+
+    Point::new( 0,  0,  1),
+    Point::new( 0,  0, -1),
+    Point::new( 0,  1,  1),
+    Point::new( 0,  1, -1),
+    Point::new( 0, -1,  1),
+    Point::new( 0, -1, -1)
+];
+
+// No straight up/down; lists legal spots to connect a redstone line to
+pub const CONNECTED_WIRE_NEIGHBORHOOD: &[Point; 12] = &[
+    Point::new( 1,  0,  0),
+    Point::new(-1,  0,  0),
+    Point::new( 1,  1,  0),
+    Point::new(-1,  1,  0),
+    Point::new( 1, -1,  0),
+    Point::new(-1, -1,  0),
 
     Point::new( 0,  0,  1),
     Point::new( 0,  0, -1),
