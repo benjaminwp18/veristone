@@ -5,35 +5,35 @@ use std::collections::HashMap;
 use std::fs;
 use std::sync::OnceLock;
 
-pub const MANHATTEN_NEIGHBORHOOD: &[LabeledPoint; 6] = &[
-    LabeledPoint { x:  1, y:  0, z:  0, label: None },
-    LabeledPoint { x: -1, y:  0, z:  0, label: None },
-    LabeledPoint { x:  0, y:  1, z:  0, label: None },
-    LabeledPoint { x:  0, y: -1, z:  0, label: None },
-    LabeledPoint { x:  0, y:  0, z:  1, label: None },
-    LabeledPoint { x:  0, y:  0, z: -1, label: None }
+pub const MANHATTEN_NEIGHBORHOOD: &[Point; 6] = &[
+    Point::new( 1,  0,  0),
+    Point::new(-1,  0,  0),
+    Point::new( 0,  1,  0),
+    Point::new( 0, -1,  0),
+    Point::new( 0,  0,  1),
+    Point::new( 0,  0, -1)
 ];
 
-pub const REDSTONE_NEIGHBORHOOD: &[LabeledPoint; 14] = &[
-    LabeledPoint { x:  1, y:  0, z:  0, label: None },
-    LabeledPoint { x: -1, y:  0, z:  0, label: None },
-    LabeledPoint { x:  1, y:  1, z:  0, label: None },
-    LabeledPoint { x: -1, y:  1, z:  0, label: None },
-    LabeledPoint { x:  1, y:  -1, z:  0, label: None },
-    LabeledPoint { x: -1, y:  -1, z:  0, label: None },
+pub const REDSTONE_NEIGHBORHOOD: &[Point; 14] = &[
+    Point::new( 1,  0,  0),
+    Point::new(-1,  0,  0),
+    Point::new( 1,  1,  0),
+    Point::new(-1,  1,  0),
+    Point::new( 1, -1,  0),
+    Point::new(-1, -1,  0),
 
-    LabeledPoint { x:  0, y:  1, z:  0, label: None },
-    LabeledPoint { x:  0, y: -1, z:  0, label: None },
+    Point::new( 0,  1,  0),
+    Point::new( 0, -1,  0),
 
-    LabeledPoint { x:  0, y:  0, z:  1, label: None },
-    LabeledPoint { x:  0, y:  0, z: -1, label: None },
-    LabeledPoint { x:  0, y:  1, z:  1, label: None },
-    LabeledPoint { x:  0, y:  1, z: -1, label: None },
-    LabeledPoint { x:  0, y:  -1, z:  1, label: None },
-    LabeledPoint { x:  0, y:  -1, z: -1, label: None }
+    Point::new( 0,  0,  1),
+    Point::new( 0,  0, -1),
+    Point::new( 0,  1,  1),
+    Point::new( 0,  1, -1),
+    Point::new( 0, -1,  1),
+    Point::new( 0, -1, -1)
 ];
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone, PartialEq)]
 pub struct Point {
     pub x: i32,
     pub y: i32,
@@ -41,6 +41,10 @@ pub struct Point {
 }
 
 impl Point {
+    pub const fn new(x: i32, y: i32, z: i32) -> Point {
+        return Point { x: x, y: y, z: z };
+    }
+
     pub fn to_labeled_point(&self) -> LabeledPoint {
         LabeledPoint {
             x: self.x,
@@ -48,6 +52,10 @@ impl Point {
             z: self.z,
             label: None
         }
+    }
+
+    pub fn compare(&self, point: &Point) -> bool {
+        self.x == point.x && self.y == point.y && self.z == point.z
     }
 }
 
@@ -66,7 +74,7 @@ impl PartialEq for LabeledPoint {
 }
 
 impl LabeledPoint {
-    pub fn no_label(x: i32, y: i32, z: i32) -> LabeledPoint {
+    pub const fn no_label(x: i32, y: i32, z: i32) -> LabeledPoint {
         return LabeledPoint { x: x, y: y, z: z, label: None };
     }
 
@@ -87,38 +95,28 @@ impl LabeledPoint {
     }
 }
 
+impl_op_ex!(- |a: &Point| -> Point {
+    Point::new(-a.x, -a.y, -a.z)
+});
+
 impl_op_ex!(+ |a: &Point, b: &Point| -> Point {
-    Point {
-        x: a.x + b.x,
-        y: a.y + b.y,
-        z: a.z + b.z
-    }
+    Point::new(a.x + b.x, a.y + b.y, a.z + b.z)
 });
 
 impl_op_ex!(+ |a: &Point, b: &LabeledPoint| -> Point {
-    Point {
-        x: a.x + b.x,
-        y: a.y + b.y,
-        z: a.z + b.z
-    }
+    Point::new(a.x + b.x, a.y + b.y, a.z + b.z)
+});
+
+impl_op_ex!(- |a: &LabeledPoint| -> LabeledPoint {
+    LabeledPoint::no_label(-a.x, -a.y, -a.z)
 });
 
 impl_op_ex!(+ |a: &LabeledPoint, b: &LabeledPoint| -> LabeledPoint {
-    LabeledPoint {
-        x: a.x + b.x,
-        y: a.y + b.y,
-        z: a.z + b.z,
-        label: None
-    }
+    LabeledPoint::no_label(a.x + b.x, a.y + b.y, a.z + b.z)
 });
 
 impl_op_ex!(+ |a: &LabeledPoint, b: &Point| -> LabeledPoint {
-    LabeledPoint {
-        x: a.x + b.x,
-        y: a.y + b.y,
-        z: a.z + b.z,
-        label: None
-    }
+    LabeledPoint::no_label(a.x + b.x, a.y + b.y, a.z + b.z)
 });
 
 pub fn get_gate_dict() -> &'static HashMap<String, GateInfo> {

@@ -1,17 +1,28 @@
 use std::{io::Write};
 use std::fs::File;
 use std::collections::{
-    VecDeque,
-    BinaryHeap
+    BinaryHeap, VecDeque
 };
 
-use crate::{points, grid};
+use crate::{mcfunction, points, grid};
 
 const MAX_SIGNAL_STRENGTH: u8 = 15;
 
+mod repeater_directions {
+    pub const TO_POSITIVE_Z: &str = "north";
+    pub const TO_NEGATIVE_Z: &str = "south";
+    pub const TO_POSITIVE_X: &str = "west";
+    pub const TO_NEGATIVE_X: &str = "east";
+}
+
 struct RedstoneSegment {
+    parent: Option<usize>,
+    delta_to_parent: points::Point,
+
+    children: Vec<usize>,
+    deltas_to_children: Vec<points::Point>,
+
     point: points::Point,
-    prev_delta: points::Point,
     signal_strength: u8
 }
 
@@ -20,7 +31,7 @@ pub struct LeeSettings {
     pub do_rerouting: bool
 }
 
-pub fn lee(file: &mut File, file_error: &str, settings: &LeeSettings, gates: &Vec<points::Gate>, wires: &Vec<points::Wire>) -> Result<(), Box<dyn std::error::Error>> {
+pub fn lee(file: &mut File, settings: &LeeSettings, gates: &Vec<points::Gate>, wires: &Vec<points::Wire>) -> Result<(), Box<dyn std::error::Error>> {
     // Find size of allowed volume for wires
     let mut min = wires[0].start.to_point();
     let mut max = wires[0].start.to_point();
@@ -54,7 +65,7 @@ pub fn lee(file: &mut File, file_error: &str, settings: &LeeSettings, gates: &Ve
         for x in 0..gate_info.x_dim {
             for y in 0..gate_info.y_dim {
                 for z in 0..gate_info.z_dim {
-                    let point = &points::LabeledPoint::no_label(
+                    let point = &points::Point::new(
                         gate.x + x,
                         gate.y + y,
                         gate.z + z
@@ -97,6 +108,7 @@ pub fn lee(file: &mut File, file_error: &str, settings: &LeeSettings, gates: &Ve
         }
 
         while route_costs.peek().is_some_and(|c| c.cost > 0) {
+            // TODO:
             // find N (random) highest intersection wires
             // remove high inters. wires from grid & route costs
             // reroute high inters. wires
@@ -119,33 +131,55 @@ pub fn lee(file: &mut File, file_error: &str, settings: &LeeSettings, gates: &Ve
         }
     }
 
-    // for route in routes {
-    //     let mut to_visit: Vec<RedstoneSegment> = vec![RedstoneSegment {
-    //         point: route.wire.start.to_point(),
-    //         prev_delta: points::Point { x: 0, y: 0, z: 0 },
-    //         signal_strength: MAX_SIGNAL_STRENGTH - 1
-    //     }];
-    //     while !to_visit.is_empty() {
-    //         let cur_point = to_visit.pop().unwrap();
-    //         let mut next_points: Vec<points::Point> = vec![];
+    // Place blocks in the world for each route
+    for route in routes {
+        let mut tree: Vec<RedstoneSegment> = vec![];
+        println!("{final_grid}");
+        println!("{route:?}");
+        tree.push(
+            RedstoneSegment {
+                parent: None,
+                delta_to_parent: points::Point { x: 0, y: 0, z: 0 },
+                children: vec![],
+                deltas_to_children: vec![],
+                point: route.wire.start.to_point(),
+                signal_strength: MAX_SIGNAL_STRENGTH - 1
+            }
+        );
+        let mut idxs_to_visit: Vec<usize> = vec![0];
+        while !idxs_to_visit.is_empty() {
+            let cur_idx = idxs_to_visit.pop().unwrap();
+            println!("Visiting {:?}", &tree[cur_idx].point);
 
-    //         for delta in points::REDSTONE_NEIGHBORHOOD {
-    //             if !delta.compare_point(&cur_point.prev_delta) && final_grid.get() {
-    //             }
-    //         }
-    //     }
-    // }
+            for delta in points::REDSTONE_NEIGHBORHOOD {
+                let neighbor = delta + &tree[cur_idx].point;
+                if !delta.compare(&tree[cur_idx].delta_to_parent) &&
+                        final_grid.get(&neighbor).is_ok_and(grid::cell::is_wire) {
+                    // TODO: check for ends/start?
+                    tree.push(
+                        RedstoneSegment {
+                            parent: Some(cur_idx),
+                            delta_to_parent: -delta,
+                            children: vec![],
+                            deltas_to_children: vec![],
+                            point: neighbor.clone(),
+                            // Decrement signal strength w/minimum of 0
+                            signal_strength: tree[cur_idx].signal_strength.checked_sub(1).unwrap_or(0)
+                        }
+                    );
+                    // println!("Found wire at {:?}", neighbor);
+                    let neighbor_idx = tree.len() - 1;
+                    idxs_to_visit.push(neighbor_idx);
+                    tree[cur_idx].children.push(neighbor_idx);
+                    tree[cur_idx].deltas_to_children.push(delta.clone());
 
-    // Translate wires to Minecraft blocks
-    for x in final_grid.min.x..=final_grid.max.x {
-        for y in final_grid.min.y..=final_grid.max.y {
-            for z in final_grid.min.z..=final_grid.max.z {
-                if grid::cell::is_wire(final_grid.get(&points::LabeledPoint::no_label(x, y, z)).unwrap()) {
-                    writeln!(file, "setblock ~{} ~{} ~{} minecraft:pink_wool",
-                        x, y - 1, z).expect(file_error);
-                    writeln!(file, "setblock ~{} ~{} ~{} minecraft:redstone_wire",
-                        x, y, z).expect(file_error);
+                    // Remove the wire as we go to avoid getting into loops
+                    final_grid.set(&neighbor, grid::cell::EMPTY).unwrap();
                 }
+            }
+
+            if final_grid.get(&tree[cur_idx].point).unwrap() != grid::cell::GATE {
+                write_commands_for_segment(file, &mut tree, cur_idx)?;
             }
         }
     }
@@ -153,11 +187,125 @@ pub fn lee(file: &mut File, file_error: &str, settings: &LeeSettings, gates: &Ve
     Ok(())
 }
 
+fn write_commands_for_segment(file: &mut File, tree: &mut Vec<RedstoneSegment>, cur_idx: usize) -> Result<(), Box<dyn std::error::Error>> {
+    if tree[cur_idx].signal_strength == 0 {
+        let mut repeater_idx = cur_idx;
+        while try_add_repeater(file, tree, repeater_idx).is_err() {
+            match tree[repeater_idx].parent {
+                Some(parent_idx) => {
+                    if tree[parent_idx].signal_strength <= MAX_SIGNAL_STRENGTH {
+                        repeater_idx = parent_idx;
+                    }
+                    else {
+                        println!("WARNING: failed to create repeater backtracking from {:?} (reached previous signal boost), faking signal strength = 1", tree[cur_idx].point);
+                        tree[cur_idx].signal_strength = 1;
+                        break;
+                    }
+                }
+                None => {
+                    println!("WARNING: failed to create repeater backtracking from {:?} (reached end of wire), faking signal strength = 1", tree[cur_idx].point);
+                    tree[cur_idx].signal_strength = 1;
+                    break;
+                }
+            }
+        }
+    }
+    else {
+        // TODO: verticality
+        place_redstone_wire(file, &tree[cur_idx].point)?;
+    }
+
+    Ok(())
+}
+
+
+fn try_add_repeater(file: &mut File, tree: &mut Vec<RedstoneSegment>, target_idx: usize) -> Result<(), ()> {
+    // Repeaters can only be added on wire segments that:
+    if tree[target_idx].deltas_to_children.len() == 1 {  // don't split,
+        let only_child= &tree[target_idx].deltas_to_children[0];
+        if // don't drop below the level of the repeater:
+            tree[target_idx].delta_to_parent.y >= 0 && only_child.y >= 0 &&
+            // and are straight:
+            (tree[target_idx].delta_to_parent.x == only_child.x ||
+            tree[target_idx].delta_to_parent.z == only_child.z) {
+
+            if tree[target_idx].delta_to_parent.x == only_child.x {
+                place_repeater(
+                    file, &tree[target_idx].point,
+                    if only_child.z > 0 {
+                        repeater_directions::TO_POSITIVE_Z
+                    }
+                    else {
+                        repeater_directions::TO_NEGATIVE_Z
+                    }
+                ).unwrap();
+            }
+            else if tree[target_idx].delta_to_parent.z == only_child.z {
+                place_repeater(
+                    file, &tree[target_idx].point,
+                    if only_child.x > 0 {
+                        repeater_directions::TO_POSITIVE_X
+                    }
+                    else {
+                        repeater_directions::TO_NEGATIVE_X
+                    }
+                ).unwrap();
+            }
+
+            tree[target_idx].signal_strength = MAX_SIGNAL_STRENGTH + 1;
+
+            // Update the signal strength of all descendants
+            let mut children_to_visit: Vec<usize> = tree[target_idx].children.clone();
+            while !children_to_visit.is_empty() {
+                let child_idx = children_to_visit.pop().unwrap();
+                tree[child_idx].signal_strength = tree[tree[child_idx].parent.unwrap()].signal_strength.checked_sub(1).unwrap_or(0);
+                for grandchild_idx in &tree[child_idx].children {
+                    children_to_visit.push(*grandchild_idx);
+                }
+            }
+        }
+        else {
+            Err(())?
+        }
+    }
+    else {
+        // TODO: unnecessary step up cases: (len == 2 but repeater still possible)
+        //  #
+        // ##
+        Err(())?
+    }
+
+    Ok(())
+}
+
+fn place_redstone_wire(file: &mut File, point: &points::Point) -> Result<(), Box<dyn std::error::Error>> {
+    writeln!(file, "setblock ~{} ~{} ~{} minecraft:obsidian",
+             point.x, point.y - 1, point.z)
+             .expect(mcfunction::FILE_ERROR);
+    writeln!(file, "setblock ~{} ~{} ~{} minecraft:redstone_wire",
+             point.x, point.y, point.z)
+             .expect(mcfunction::FILE_ERROR);
+    Ok(())
+}
+
+fn place_repeater(file: &mut File, point: &points::Point, direction: &str) -> Result<(), Box<dyn std::error::Error>> {
+    writeln!(file, "setblock ~{} ~{} ~{} minecraft:obsidian",
+             point.x, point.y - 1, point.z)
+             .expect(mcfunction::FILE_ERROR);
+    writeln!(file, "setblock ~{} ~{} ~{} minecraft:repeater[facing={}]",
+             point.x, point.y, point.z, direction)
+             .expect(mcfunction::FILE_ERROR);
+    Ok(())
+}
+
 fn route_wire(initial_grid: &grid::Grid, wire: &points::Wire) -> Result<points::Route, Box<dyn std::error::Error>> {
     let mut temp_grid: grid::Grid = initial_grid.clone();
 
-    let mut points_to_check: VecDeque<points::LabeledPoint> = VecDeque::new();
-    points_to_check.push_back(wire.start.clone()); // push the starting point to start there
+    let wire_start = wire.start.to_point();
+    let wire_ends: Vec<points::Point> = wire.ends.iter().map(|lp| lp.to_point()).collect();
+
+    let mut points_to_check: VecDeque<points::Point> = VecDeque::new();
+    points_to_check.push_back(wire_start.clone()); // push the starting point to start there
 
     print!("Wire: {}, {}, {} -> ", wire.start.x, wire.start.y, wire.start.z);
     for end in &wire.ends {
@@ -165,11 +313,11 @@ fn route_wire(initial_grid: &grid::Grid, wire: &points::Wire) -> Result<points::
     }
     println!();
 
-    let mut ends_to_reach = wire.ends.clone();
+    let mut ends_to_reach  = wire_ends.clone();
     let mut current_distance;
     let mut at_start = true;
     while points_to_check.len() > 0 {
-        let current: points::LabeledPoint = points_to_check.pop_front().unwrap();
+        let current: points::Point = points_to_check.pop_front().unwrap();
         // println!("Getting @ {current:?}");
         if at_start {
             // Distance to start is 0 when at start
@@ -196,8 +344,8 @@ fn route_wire(initial_grid: &grid::Grid, wire: &points::Wire) -> Result<points::
         }
 
         // Add adjacent points to queue if they're empty
-        for delta in points::MANHATTEN_NEIGHBORHOOD {
-            let point = &current + delta;
+        for delta in points::REDSTONE_NEIGHBORHOOD {
+            let point = delta + &current;
             if temp_grid.get(&point).is_ok_and(|x| x == grid::cell::EMPTY) ||
                     ends_to_reach.contains(&point) {
                 _ = temp_grid.set(&point, current_distance + 1);
@@ -212,26 +360,29 @@ fn route_wire(initial_grid: &grid::Grid, wire: &points::Wire) -> Result<points::
 
     // Work backward from end point back to start &
     // edit final_grid to set final wire positions
-    for end in &wire.ends {
+    for end in wire_ends {
         let mut current = end.clone();
         let mut current_value = temp_grid.get(&current)?;
         println!("Backtracking from {}, {}, {}", current.x, current.y, current.z);
-        'backtrack_loop: while !current.compare(&wire.start) {
-            if !current.compare(end) {
-                // Don't add ends, they're inside gates (they're the pin blocks)
-                route.points.push(current.to_point());
-            }
+        'backtrack_loop: while !current.compare(&wire_start) {
             println!("Current: {current:?} = {current_value}");
 
-            for delta in points::MANHATTEN_NEIGHBORHOOD {
+            for delta in points::REDSTONE_NEIGHBORHOOD {
                 let neighbor = &current + delta;
-                if neighbor.compare(&wire.start) ||
+                if neighbor.compare(&wire_start) ||
                     temp_grid.get(&neighbor).is_ok_and(|neighbor_value|
                         grid::cell::is_lee_floodfill(neighbor_value) &&  // Don't go to gates/other wires
                         (neighbor_value < current_value ||  // Follow gradient down...
                          grid::cell::is_blocked(current_value))  // ...or get off a gate if we're sitting on one
                     )
                 {
+                    // We're leaving current, add it to the route
+                    if !current.compare(&end) {
+                        // Don't add ends, they're inside gates (they're the pin blocks)
+                        route.points.push(current);
+                    }
+
+                    // Move to neighbor
                     current = neighbor;
                     current_value = temp_grid.get(&current)?;
                     continue 'backtrack_loop;

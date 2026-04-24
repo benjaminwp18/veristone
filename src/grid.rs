@@ -80,7 +80,7 @@ impl Grid {
     Err() on the point lying outside the grid
     Ok(corresponding GridPoint) otherwise
     */
-    fn to_grid_point(&self, point: &points::LabeledPoint)
+    fn to_grid_point(&self, point: &points::Point)
             -> Result<GridPoint, Box<dyn std::error::Error>> {
         let x = point.x - self.min.x;
         let y = point.y - self.min.y;
@@ -94,21 +94,21 @@ impl Grid {
         }
     }
 
-    pub fn contains(&self, point: &points::LabeledPoint) -> bool {
+    pub fn contains(&self, point: &points::Point) -> bool {
         return self.to_grid_point(point).is_ok();
     }
 
     /**
     Sets the point to value or returns an error if point is outside the grid
     */
-    pub fn set(&mut self, point: &points::LabeledPoint, value: i32)
+    pub fn set(&mut self, point: &points::Point, value: i32)
             -> Result<(), Box<dyn std::error::Error>> {
         let grid_point = self.to_grid_point(point)?;
         self.grid[grid_point.x][grid_point.y][grid_point.z] = value;
         Ok(())
     }
 
-    pub fn get(&self, point: &points::LabeledPoint)
+    pub fn get(&self, point: &points::Point)
             -> Result<i32, Box<dyn std::error::Error>> {
         let grid_point = self.to_grid_point(point)?;
         Ok(self.grid[grid_point.x][grid_point.y][grid_point.z])
@@ -116,7 +116,7 @@ impl Grid {
 
     fn modify_skirt(&mut self, pin: &points::LabeledPoint, value_to_replace: i32, value_to_write: i32) {
         for delta1 in points::REDSTONE_NEIGHBORHOOD {
-            let neighbor = pin + delta1;
+            let neighbor = delta1 + pin;
 
             match self.get(&neighbor) {
                 Ok(neighbor_value) => {
@@ -158,7 +158,7 @@ impl Grid {
         // Skip first & last points, assuming these are gate pins
         println!("{route:?}");
         for point in &route.points {
-            let point_value = self.get(&point.to_labeled_point()).unwrap();
+            let point_value = self.get(point).unwrap();
             assert!(point_value != cell::GATE, "Wire intersected with gate, not supported ({point:?})");
             if cell::is_wire(point_value) {
                 cost += cell::num_intersections(point_value) * cell::INTERSECTION_COST;
@@ -182,18 +182,18 @@ impl Grid {
 
         // Update grid with new intersection (not adjacency) counts
         for point in &route.points {
-            let point_value = self.get(&point.to_labeled_point()).unwrap();
+            let point_value = self.get(&point).unwrap();
 
             if cell::is_wire(point_value) {
                 // Add 1 intersection
-                self.set(&point.to_labeled_point(), point_value - 1).unwrap();
+                self.set(&point, point_value - 1).unwrap();
             }
             else {
-                self.set(&point.to_labeled_point(), cell::BASE_WIRE).unwrap();
+                self.set(&point, cell::BASE_WIRE).unwrap();
             }
 
             for delta in points::REDSTONE_NEIGHBORHOOD {
-                let neighbor = delta + point;
+                let neighbor = point + delta;
                 match self.get(&neighbor) {
                     Ok(neighbor_value) => {
                         if cell::is_wire(neighbor_value) {
@@ -213,15 +213,15 @@ impl Grid {
 
     pub fn remove_route(&mut self, route: &points::Route) {
         for point in &route.points {
-            let point_value = self.get(&point.to_labeled_point()).unwrap();
+            let point_value = self.get(point).unwrap();
             assert!(point_value != cell::GATE, "Wire intersected with gate, not supported ({point:?})");
             if point_value == cell::BASE_WIRE {
                 // Reset cell if this is the last wire on it
-                self.set(&point.to_labeled_point(), cell::EMPTY).unwrap();
+                self.set(point, cell::EMPTY).unwrap();
             }
             else {
                 // Remove 1 intersection
-                self.set(&point.to_labeled_point(), point_value + 1).unwrap();
+                self.set(point, point_value + 1).unwrap();
             }
 
             // Remove adjacency markers if they don't have their own wire neighbors
