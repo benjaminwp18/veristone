@@ -153,9 +153,9 @@ pub fn lee(file: &mut File, settings: &LeeSettings, gates: &Vec<points::Gate>, w
         let mut idxs_to_visit: Vec<usize> = vec![0];
         while !idxs_to_visit.is_empty() {
             let cur_idx = idxs_to_visit.pop().unwrap();
-            // println!("Visiting {:?}", &tree[cur_idx].point);
+            println!("Visiting {:?}", &tree[cur_idx].point);
 
-            for delta in points::REDSTONE_NEIGHBORHOOD {
+            for delta in points::CONNECTED_WIRE_NEIGHBORHOOD {
                 let neighbor = delta + &tree[cur_idx].point;
                 if !delta.compare(&tree[cur_idx].delta_to_parent) &&
                         final_grid.get(&neighbor).is_ok_and(grid::cell::is_wire) {
@@ -193,6 +193,7 @@ pub fn lee(file: &mut File, settings: &LeeSettings, gates: &Vec<points::Gate>, w
 
 fn write_commands_for_segment(file: &mut File, tree: &mut Vec<RedstoneSegment>, cur_idx: usize) -> Result<(), Box<dyn std::error::Error>> {
     if tree[cur_idx].signal_strength == 0 {
+        println!("Writing repeater at {:?}", tree[cur_idx].point);
         let mut repeater_idx = cur_idx;
         while try_add_repeater(file, tree, repeater_idx).is_err() {
             match tree[repeater_idx].parent {
@@ -215,6 +216,7 @@ fn write_commands_for_segment(file: &mut File, tree: &mut Vec<RedstoneSegment>, 
         }
     }
     else {
+        println!("Writing redstone at {:?}", tree[cur_idx].point);
         // TODO: verticality
         place_redstone_wire(file, &tree[cur_idx].point)?;
     }

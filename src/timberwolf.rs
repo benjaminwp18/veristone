@@ -1,6 +1,6 @@
 use petgraph::{graph::{self, NodeIndex}, Directed};
 use std::{cmp::{max, min}, collections::HashMap, fs::File, io::Write, path::Path};
-use rand::{Rng, seq::IndexedRandom};
+use rand::{RngExt, SeedableRng, seq::IndexedRandom};
 use plotters::{drawing::IntoDrawingArea, prelude, style::{IntoFont, Palette, Palette99, ShapeStyle}};
 
 use crate::{read_blif, points};
@@ -66,9 +66,12 @@ pub fn anneal(
     gate_info: &HashMap<String, points::GateInfo>,
     logging_rules: u8
 ) -> HashMap<NodeIndex, points::Gate> {
-    let mut current_state = gen_random_state(circuit_graph);
+    let mut rand_rng = rand::rngs::ChaCha8Rng::seed_from_u64(42);
+
+    let mut current_state = gen_random_state(&mut rand_rng, circuit_graph);
     let mut candidate_state = current_state.clone();
-    let idxs: Vec<NodeIndex> = current_state.keys().map(|k| *k).collect();
+    let mut idxs: Vec<NodeIndex> = current_state.keys().map(|k| *k).collect();
+    idxs.sort_by_key(|&idx| idx.index());  // Sort to ensure reproducibility
     let idx_to_int: HashMap<&NodeIndex, u32> = idxs.iter().zip(0..).collect();
     let mut temperature = TEMPERATURE_START;
 
@@ -93,7 +96,7 @@ pub fn anneal(
     while temperature >= TEMPERATURE_END {
         for _ in 0..PERTUB_ATTEMPTS_PER_GATE {
             // Find a random neighboring state
-            let perturbation = perturb(&mut candidate_state, &idxs);
+            let perturbation = perturb(&mut rand_rng, &mut candidate_state, &idxs);
 
             // delta_cost < 0 -> new state is better
             let current_cost = cost(&current_state, circuit_graph, gate_info);
@@ -102,7 +105,7 @@ pub fn anneal(
 
             // Decide whether to accept the new state
             let prob = accept_prob(delta_cost, temperature);
-            let accepted = rand::random_range(0f32..=1f32) < prob;
+            let accepted = rand_rng.random_range(0f32..=1f32) < prob;
             if accepted {
                 // Record perturbations for later plotting
                 match &perturbation {
@@ -332,11 +335,11 @@ fn cost(
     return cost;
 }
 
-fn perturb<'a>(state: &mut HashMap<NodeIndex, points::Gate>, idxs: &'a Vec<NodeIndex>) -> Perturbation<'a> {
-    match rand::rng().random_range(0..=MOVES_PER_SWAP) {
+fn perturb<'a>(rand_rng: &mut rand::rngs::ChaCha8Rng, state: &mut HashMap<NodeIndex, points::Gate>, idxs: &'a Vec<NodeIndex>) -> Perturbation<'a> {
+    match rand_rng.random_range(0..=MOVES_PER_SWAP) {
         0 => {
             // Swap
-            let mut idx_iterator = idxs.choose_multiple(&mut rand::rng(), 2);
+            let mut idx_iterator = idxs.sample(rand_rng, 2);
             let (idx1, idx2) = (idx_iterator.next().unwrap(), idx_iterator.next().unwrap());
             let [gate1, gate2] = state.get_disjoint_mut([idx1, idx2]).map(|x| x.unwrap());
 
@@ -360,15 +363,15 @@ fn perturb<'a>(state: &mut HashMap<NodeIndex, points::Gate>, idxs: &'a Vec<NodeI
         },
         _ => {
             // Move
-            let random_idx = idxs.choose(&mut rand::rng()).unwrap();
+            let random_idx = idxs.choose(rand_rng).unwrap();
             let gate = state.get_mut(random_idx).unwrap();
             let start_point = points::Point {
                 x: gate.x,
                 y: 0,
                 z: gate.z
             };
-            gate.x += rand::rng().random_range(-5..=5);
-            gate.z += rand::rng().random_range(-5..=5);
+            gate.x += rand_rng.random_range(-5..=5);
+            gate.z += rand_rng.random_range(-5..=5);
 
             return Perturbation::Move {
                 idx: random_idx,
@@ -400,7 +403,7 @@ fn accept_prob(delta_cost: f32, temperature: f32) -> f32 {
     return f32::min(1f32, f32::exp(-delta_cost / temperature));
 }
 
-fn gen_random_state(circuit_graph: &graph::Graph<read_blif::Node, String, Directed>) -> HashMap<NodeIndex, points::Gate> {
+fn gen_random_state(rand_rng: &mut rand::rngs::ChaCha8Rng, circuit_graph: &graph::Graph<read_blif::Node, String, Directed>) -> HashMap<NodeIndex, points::Gate> {
     let mut gates: HashMap<NodeIndex, points::Gate> = HashMap::new();
 
     for node_idx in circuit_graph.node_indices() {
@@ -410,9 +413,9 @@ fn gen_random_state(circuit_graph: &graph::Graph<read_blif::Node, String, Direct
                 gates.insert(node_idx, points::Gate {
                     name: node_weight.name.clone(),
                     // Start in closest 3rd of the available area
-                    x: rand::rng().random_range(COORD_MIN..=COORD_MAX / 3),
+                    x: rand_rng.random_range(COORD_MIN..=COORD_MAX / 3),
                     y: 0,
-                    z: rand::rng().random_range(COORD_MIN..=COORD_MAX / 3),
+                    z: rand_rng.random_range(COORD_MIN..=COORD_MAX / 3),
                 });
             },
             _ => ()  // Placement states only include gates
