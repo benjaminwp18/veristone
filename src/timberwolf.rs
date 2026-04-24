@@ -66,6 +66,10 @@ pub fn anneal(
     gate_info: &HashMap<String, points::GateInfo>,
     logging_rules: u8
 ) -> HashMap<NodeIndex, points::Gate> {
+    // For adder.v:
+    // 10 has cutting error
+    // 20 loops
+    // 42 works
     let mut rand_rng = rand::rngs::ChaCha8Rng::seed_from_u64(42);
 
     let mut current_state = gen_random_state(&mut rand_rng, circuit_graph);
