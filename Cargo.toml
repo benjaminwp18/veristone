@@ -7,9 +7,19 @@ edition = "2024"
 blif-parser = "0.1.7"
 clap = { version = "4.5", features = ["derive"] }
 petgraph = "0.8.3"
-graphviz-rust = "0.9.6"
+rand = { version = "0.10.1", features = ["chacha"] }
 serde_json = "1.0.145"
 serde = "1.0.228"
+impl_ops = "0.1.1"
+
+# (theoretically optional) For visualization of intermediate representations
+graphviz-rust = "0.9.6"
+plotters = "0.3.7"
+csv = "1.4.0"
+# TODO: consider removing bitmap support
+# plotters = { git = "https://github.com/plotters-rs/plotters.git", default-features = false, features = ["svg"] }
 
 [patch.crates-io]
-blif-parser = { git = 'https://github.com/benjaminwp18/blif-parser.git' }
+# Enable support for Windows line endings (\r\n)
+# TODO: latest commit on this fork breaks support; fix on the fork
+blif-parser = { git = 'https://github.com/benjaminwp18/blif-parser.git', rev = "2e94711e10d73136c1291e0aa85bd58e5a66be83" }

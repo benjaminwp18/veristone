@@ -14,6 +14,7 @@
         pkg-config
         cargo
         yosys
+        graphviz
       ];
     };
   };
